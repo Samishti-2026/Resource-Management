@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Role {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  users User[]
+}
+
+model User {
+  id                 Int                @id @default(autoincrement())
+  name               String
+  email              String             @unique
+  passwordHash       String
+  roleId             Int
+  isActive           Boolean            @default(true)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  role               Role               @relation(fields: [roleId], references: [id])
+  managedProjects    Project[]          @relation("ProjectManager")
+  projectMemberships ProjectMember[]
+  allocations        Allocation[]
+  timesheets         Timesheet[]
+  exceptionRequests  ExceptionRequest[]
+  reviewedTimesheets Timesheet[]        @relation("TimesheetReviewer")
+  reviewedExceptions ExceptionRequest[] @relation("ExceptionReviewer")
+  skills             UserSkill[]
+  auditLogs          AuditLog[]
+  refreshTokens      RefreshToken[]
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  tokenHash String   @unique
+  userId    Int
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Project {
+  id               Int               @id @default(autoincrement())
+  name             String
+  description      String?
+  status           ProjectStatus     @default(ACTIVE)
+  projectManagerId Int
+  createdBy        Int
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  projectManager   User              @relation("ProjectManager", fields: [projectManagerId], references: [id])
+  members          ProjectMember[]
+  allocations      Allocation[]
+  timesheetEntries TimesheetEntry[]
+  exceptionRequests ExceptionRequest[]
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+model ProjectMember {
+  id         Int      @id @default(autoincrement())
+  projectId  Int
+  employeeId Int
+  joinedAt   DateTime @default(now())
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  employee   User     @relation(fields: [employeeId], references: [id])
+
+  @@unique([projectId, employeeId])
+}
+
+model Skill {
+  id          Int         @id @default(autoincrement())
+  name        String      @unique
+  description String?
+  createdBy   Int
+  createdAt   DateTime    @default(now())
+  userSkills  UserSkill[]
+}
+
+model UserSkill {
+  id      Int   @id @default(autoincrement())
+  userId  Int
+  skillId Int
+  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill   Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, skillId])
+}
+
+model Allocation {
+  id             Int      @id @default(autoincrement())
+  employeeId     Int
+  projectId      Int
+  allocatedHours Float
+  createdBy      Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  employee       User     @relation(fields: [employeeId], references: [id])
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, projectId])
+}
+
+model Holiday {
+  id          Int      @id @default(autoincrement())
+  holidayDate DateTime @unique @db.Date
+  holidayName String
+  createdBy   Int
+  createdAt   DateTime @default(now())
+}
+
+model Timesheet {
+  id           Int             @id @default(autoincrement())
+  employeeId   Int
+  weekStart    DateTime        @db.Date
+  weekEnd      DateTime        @db.Date
+  weekNumber   Int
+  status       TimesheetStatus @default(DRAFT)
+  submittedAt  DateTime?
+  reviewedAt   DateTime?
+  reviewedBy   Int?
+  rejectReason String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  employee     User            @relation(fields: [employeeId], references: [id])
+  reviewer     User?           @relation("TimesheetReviewer", fields: [reviewedBy], references: [id])
+  entries      TimesheetEntry[]
+
+  @@unique([employeeId, weekStart])
+}
+
+enum TimesheetStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+model TimesheetEntry {
+  id          Int       @id @default(autoincrement())
+  timesheetId Int
+  projectId   Int
+  entryDate   DateTime  @db.Date
+  hours       Float
+  notes       String?
+  timesheet   Timesheet @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+  project     Project   @relation(fields: [projectId], references: [id])
+}
+
+model ExceptionRequest {
+  id          Int           @id @default(autoincrement())
+  employeeId  Int
+  projectId   Int
+  requestType ExceptionType
+  requestDate DateTime      @db.Date
+  reason      String
+  status      RequestStatus @default(PENDING)
+  reviewedBy  Int?
+  reviewedAt  DateTime?
+  createdAt   DateTime      @default(now())
+  employee    User          @relation(fields: [employeeId], references: [id])
+  project     Project       @relation(fields: [projectId], references: [id])
+  reviewer    User?         @relation("ExceptionReviewer", fields: [reviewedBy], references: [id])
+}
+
+enum ExceptionType {
+  WEEKEND
+  HOLIDAY
+  BACKDATE
+  ALLOCATION_BREACH
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  action     String
+  entityType String
+  entityId   Int
+  oldValue   Json?
+  newValue   Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+}
