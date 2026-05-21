@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TimesheetPro API Documentation</title>
+  <meta name="description" content="Enterprise Timesheet & Resource Management System — REST API Reference" />
+
+  <!-- Swagger UI from CDN -->
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui.css" />
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+      background: #f8fafc;
+    }
+
+    /* Custom top banner */
+    .api-banner {
+      background: linear-gradient(135deg, #1e293b 0%, #1e40af 100%);
+      color: white;
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .api-banner-left { display: flex; align-items: center; gap: 14px; }
+    .api-logo {
+      width: 44px; height: 44px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 16px; letter-spacing: -0.5px;
+      flex-shrink: 0;
+    }
+    .api-banner h1 { font-size: 18px; font-weight: 700; }
+    .api-banner p  { font-size: 12px; color: #93c5fd; margin-top: 2px; }
+    .api-badge {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #e0f2fe;
+    }
+    .api-banner-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    /* Quick-start info bar */
+    .info-bar {
+      background: #eff6ff;
+      border-bottom: 1px solid #bfdbfe;
+      padding: 10px 32px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      flex-wrap: wrap;
+      font-size: 12px;
+      color: #1e40af;
+    }
+    .info-bar strong { font-weight: 600; }
+    .info-bar code {
+      background: #dbeafe;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 11px;
+    }
+
+    /* Swagger UI overrides */
+    .swagger-ui .topbar { display: none; }
+    .swagger-ui .info   { margin: 20px 0 10px; }
+    .swagger-ui .info .title { color: #1e293b; font-size: 24px; }
+    .swagger-ui .info .description p { color: #475569; }
+    .swagger-ui .scheme-container {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin: 0 0 16px;
+    }
+    .swagger-ui .opblock-tag {
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 14px;
+    }
+    .swagger-ui .opblock.opblock-post   .opblock-summary { border-color: #22c55e; }
+    .swagger-ui .opblock.opblock-get    .opblock-summary { border-color: #3b82f6; }
+    .swagger-ui .opblock.opblock-patch  .opblock-summary { border-color: #f59e0b; }
+    .swagger-ui .opblock.opblock-delete .opblock-summary { border-color: #ef4444; }
+
+    #swagger-ui { max-width: 1400px; margin: 0 auto; padding: 0 16px 40px; }
+  </style>
+</head>
+<body>
+
+  <!-- Banner -->
+  <div class="api-banner">
+    <div class="api-banner-left">
+      <div class="api-logo">TS</div>
+      <div>
+        <h1>TimesheetPro API</h1>
+        <p>Enterprise Timesheet &amp; Resource Management System</p>
+      </div>
+    </div>
+    <div class="api-banner-right">
+      <span class="api-badge">OpenAPI 3.0</span>
+      <span class="api-badge">v1.0.0</span>
+      <span class="api-badge">36 Endpoints</span>
+    </div>
+  </div>
+
+  <!-- Quick-start bar -->
+  <div class="info-bar">
+    <span>🔐 <strong>Auth:</strong> Login → copy <code>accessToken</code> → click Authorize</span>
+    <span>👤 <strong>Demo RM:</strong> <code>rm@company.com</code> / <code>Password123!</code></span>
+    <span>👤 <strong>Demo PM:</strong> <code>pm@company.com</code> / <code>Password123!</code></span>
+    <span>👤 <strong>Demo Emp:</strong> <code>emp1@company.com</code> / <code>Password123!</code></span>
+  </div>
+
+  <!-- Swagger UI -->
+  <div id="swagger-ui"></div>
+
+  <script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-bundle.js"></script>
+  <script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-standalone-preset.js"></script>
+  <script>
+    window.onload = () => {
+      SwaggerUIBundle({
+        url: './openapi.json',
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset,
+        ],
+        plugins: [SwaggerUIBundle.plugins.DownloadUrl],
+        layout: 'StandaloneLayout',
+        persistAuthorization: true,
+        displayRequestDuration: true,
+        filter: true,
+        tryItOutEnabled: false,   // disabled — no live server in static hosting
+        defaultModelsExpandDepth: 1,
+        defaultModelExpandDepth: 2,
+        docExpansion: 'list',
+      });
+    };
+  </script>
+</body>
+</html>
