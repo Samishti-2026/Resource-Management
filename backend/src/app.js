@@ -154,22 +154,23 @@ app.use('/api', (req, res) => {
 
 // Serve React frontend in production
 const path = require('path');
+const fs = require('fs');
 const frontendDist = path.join(__dirname, '../frontend-dist');
 
-if (env.NODE_ENV === 'production') {
+if (env.NODE_ENV === 'production' && fs.existsSync(frontendDist)) {
   app.use(express.static(frontendDist));
   // All non-API routes serve React's index.html
   app.get('*', (req, res) => {
     res.sendFile(path.join(frontendDist, 'index.html'));
   });
 } else {
-  // In development, keep the original 404 handler
+  // In development or if frontend not built yet
   app.use((req, res) => {
     res.status(404).json({ success: false, message: `Route ${req.method} ${req.path} not found` });
   });
 }
 
-// Global error handler
+// Global error handler — must be last
 app.use(errorHandler);
 
 // Graceful shutdown
