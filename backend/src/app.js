@@ -147,10 +147,27 @@ app.use(`${API_PREFIX}/holidays`, holidaysRoutes);
 app.use(`${API_PREFIX}/reports`, reportsRoutes);
 app.use(`${API_PREFIX}/skills`, skillsRoutes);
 
-// 404 handler
-app.use((req, res) => {
+// 404 handler for API routes only
+app.use('/api', (req, res) => {
   res.status(404).json({ success: false, message: `Route ${req.method} ${req.path} not found` });
 });
+
+// Serve React frontend in production
+const path = require('path');
+const frontendDist = path.join(__dirname, '../frontend-dist');
+
+if (env.NODE_ENV === 'production') {
+  app.use(express.static(frontendDist));
+  // All non-API routes serve React's index.html
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(frontendDist, 'index.html'));
+  });
+} else {
+  // In development, keep the original 404 handler
+  app.use((req, res) => {
+    res.status(404).json({ success: false, message: `Route ${req.method} ${req.path} not found` });
+  });
+}
 
 // Global error handler
 app.use(errorHandler);
