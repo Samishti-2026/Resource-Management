@@ -160,7 +160,7 @@ const frontendDist = path.join(__dirname, '../frontend-dist');
 if (env.NODE_ENV === 'production' && fs.existsSync(frontendDist)) {
   app.use(express.static(frontendDist));
   // All non-API routes serve React's index.html
-  app.get('*', (req, res) => {
+  app.get('/{*splat}', (req, res) => {
     res.sendFile(path.join(frontendDist, 'index.html'));
   });
 } else {
