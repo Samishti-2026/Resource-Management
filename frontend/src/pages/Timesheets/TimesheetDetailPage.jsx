@@ -6,6 +6,7 @@ import {
   approveTimesheet, rejectTimesheet, copyPreviousWeek,
 } from '../../services/timesheetService';
 import { getProjects } from '../../services/projectService';
+import { getHolidays } from '../../services/holidayService';
 import { useAuthStore } from '../../store/authStore';
 import { useToast } from '../../hooks/useToast';
 import StatusBadge from '../../components/ui/StatusBadge';
@@ -46,6 +47,23 @@ export default function TimesheetDetailPage() {
     queryFn: () => getProjects({ status: 'ACTIVE', limit: 100 }),
     enabled: isEmployee,
   });
+
+  // Fetch holidays for the year of this timesheet's week so we can mark them in the grid
+  const weekYear = ts?.weekStart ? new Date(ts.weekStart).getFullYear() : new Date().getFullYear();
+  const { data: holidayList = [] } = useQuery({
+    queryKey: ['holidays', weekYear],
+    queryFn: () => getHolidays({ year: weekYear }),
+    enabled: !!ts,
+  });
+
+  // Build a Set of holiday date strings (YYYY-MM-DD) for O(1) lookup
+  const holidayDateSet = new Set(
+    holidayList.map((h) => formatDateInput(h.holidayDate))
+  );
+  // Build a map from date string → holiday name for tooltip
+  const holidayNameMap = Object.fromEntries(
+    holidayList.map((h) => [formatDateInput(h.holidayDate), h.holidayName])
+  );
 
   /* ── Initialise entries from loaded timesheet ───────────────────────────── */
   useEffect(() => {
@@ -184,11 +202,9 @@ export default function TimesheetDetailPage() {
             Weekly Timesheet
           </h1>
           <p className="page-subtitle">
-            {/* Week range */}
             <span className="font-medium text-gray-700">
               {getWeekLabel(ts.weekStart)}
             </span>
-            {/* Employee name for PM/RM view */}
             {!isEmployee && (
               <span className="ml-2 text-gray-400">· {ts.employee?.name}</span>
             )}
@@ -236,34 +252,37 @@ export default function TimesheetDetailPage() {
         <div className="table-scroll">
           <table className="table" style={{ minWidth: '700px' }}>
             <thead>
-              {/* Row 1: column labels */}
               <tr>
-                {/* User Name column — shown for PM/RM, or current user for employee */}
                 <th className="text-left" style={{ minWidth: '110px' }}>User Name</th>
                 <th className="text-left" style={{ minWidth: '130px' }}>Project</th>
 
                 {weekDays.map((day) => {
                   const isWE = isWeekendDay(day);
+                  const ds = formatDateInput(day);
+                  const isHoliday = holidayDateSet.has(ds);
+                  const holidayName = holidayNameMap[ds];
                   const dayTotal = getDailyTotal(day);
                   const isOver = dayTotal > MAX;
-                  const isWarn = dayTotal >= 10 && dayTotal <= MAX;
 
                   return (
                     <th
                       key={day.toISOString()}
-                      className={`text-center ${isWE ? 'bg-slate-100' : ''}`}
+                      className={`text-center ${isHoliday ? 'bg-orange-50' : isWE ? 'bg-slate-100' : ''}`}
                       style={{ minWidth: '72px' }}
+                      title={isHoliday ? `Holiday: ${holidayName}` : undefined}
                     >
-                      {/* Day name */}
-                      <div className={`text-xs font-semibold ${isWE ? 'text-slate-400' : 'text-gray-700'}`}>
+                      <div className={`text-xs font-semibold ${isHoliday ? 'text-orange-600' : isWE ? 'text-slate-400' : 'text-gray-700'}`}>
                         {getDayName(day)}
                       </div>
-                      {/* Date — format: 18-May */}
-                      <div className={`text-xs font-normal ${isWE ? 'text-slate-400' : 'text-gray-500'}`}>
+                      <div className={`text-xs font-normal ${isHoliday ? 'text-orange-500' : isWE ? 'text-slate-400' : 'text-gray-500'}`}>
                         {formatDate(day, 'dd-MMM')}
                       </div>
-                      {/* Weekend label */}
-                      {isWE && (
+                      {isHoliday && (
+                        <div className="text-xs text-orange-500 font-normal leading-tight truncate max-w-[68px]" title={holidayName}>
+                          🎉 {holidayName}
+                        </div>
+                      )}
+                      {!isHoliday && isWE && (
                         <div className="text-xs text-orange-400 font-normal leading-tight">Weekend</div>
                       )}
                     </th>
@@ -284,12 +303,10 @@ export default function TimesheetDetailPage() {
               ) : (
                 projects.map((project, idx) => {
                   const projTotal = getProjectTotal(project.id);
-                  // Show user name only on first project row, then blank (like Excel merge)
                   const showUserName = idx === 0;
 
                   return (
                     <tr key={project.id} className="hover:bg-blue-50/30 transition-colors">
-                      {/* User Name — shown once, vertically centred across rows */}
                       <td className="align-middle">
                         {showUserName ? (
                           <span className="text-xs font-semibold text-gray-800">
@@ -300,29 +317,32 @@ export default function TimesheetDetailPage() {
                         )}
                       </td>
 
-                      {/* Project name */}
                       <td>
                         <span className="text-xs font-medium text-gray-800 truncate block max-w-[120px]" title={project.name}>
                           {project.name}
                         </span>
                       </td>
 
-                      {/* Hour cells — one per day */}
                       {weekDays.map((day) => {
                         const isWE = isWeekendDay(day);
-                        const key = `${project.id}_${formatDateInput(day)}`;
+                        const ds = formatDateInput(day);
+                        const isHoliday = holidayDateSet.has(ds);
+                        const holidayName = holidayNameMap[ds];
+                        const key = `${project.id}_${ds}`;
                         const val = entries[key]?.hours;
                         const displayVal = val !== undefined && val !== null ? val : '';
                         const dayTotal = getDailyTotal(day);
                         const isOver = dayTotal > MAX;
+                        // Blocked cell: weekend or holiday (no approved exception)
+                        const isBlocked = isWE || isHoliday;
 
                         return (
                           <td
                             key={day.toISOString()}
-                            className={`text-center p-1 ${isWE ? 'bg-slate-50' : ''}`}
+                            className={`text-center p-1 ${isHoliday ? 'bg-orange-50' : isWE ? 'bg-slate-50' : ''}`}
+                            title={isHoliday ? `Holiday: ${holidayName}` : undefined}
                           >
-                            {canEdit && !isWE ? (
-                              /* Editable input */
+                            {canEdit && !isBlocked ? (
                               <input
                                 type="number"
                                 min="0"
@@ -342,19 +362,22 @@ export default function TimesheetDetailPage() {
                                 placeholder="0"
                               />
                             ) : (
-                              /* Read-only display */
                               <span className={`
                                 text-xs font-medium
-                                ${isWE ? 'text-gray-300' : (displayVal > 0 ? 'text-gray-800' : 'text-gray-400')}
+                                ${isHoliday
+                                  ? 'text-orange-400'
+                                  : isWE
+                                  ? 'text-gray-300'
+                                  : (displayVal > 0 ? 'text-gray-800' : 'text-gray-400')
+                                }
                               `}>
-                                {isWE ? '—' : (displayVal !== '' ? displayVal : '0')}
+                                {isHoliday ? '🎉' : isWE ? '—' : (displayVal !== '' ? displayVal : '0')}
                               </span>
                             )}
                           </td>
                         );
                       })}
 
-                      {/* Project row total */}
                       <td className="text-center">
                         <span className={`text-xs font-bold ${projTotal > 0 ? 'text-blue-700' : 'text-gray-300'}`}>
                           {projTotal > 0 ? projTotal : '0'}
@@ -373,11 +396,13 @@ export default function TimesheetDetailPage() {
                 {weekDays.map((day) => {
                   const t = getDailyTotal(day);
                   const isWE = isWeekendDay(day);
+                  const ds = formatDateInput(day);
+                  const isHoliday = holidayDateSet.has(ds);
                   const isOver = t > MAX;
                   const isWarn = t >= 10 && t <= MAX;
 
                   return (
-                    <td key={day.toISOString()} className={`text-center py-2 ${isWE ? 'bg-slate-100' : ''}`}>
+                    <td key={day.toISOString()} className={`text-center py-2 ${isHoliday ? 'bg-orange-50' : isWE ? 'bg-slate-100' : ''}`}>
                       <span className={`
                         text-xs font-bold px-1.5 py-0.5 rounded
                         ${isOver
@@ -386,10 +411,12 @@ export default function TimesheetDetailPage() {
                           ? 'bg-yellow-100 text-yellow-700'
                           : t > 0
                           ? 'text-green-700'
+                          : isHoliday
+                          ? 'text-orange-400'
                           : 'text-gray-300'
                         }
                       `}>
-                        {isWE ? '—' : (t > 0 ? `${t}h` : '0h')}
+                        {isHoliday && t === 0 ? '🎉' : isWE && t === 0 ? '—' : (t > 0 ? `${t}h` : '0h')}
                       </span>
                     </td>
                   );
@@ -419,6 +446,10 @@ export default function TimesheetDetailPage() {
           <span className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded bg-slate-100 border border-slate-300 inline-block" />
             Weekend
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded bg-orange-100 border border-orange-300 inline-block" />
+            Company Holiday
           </span>
           <span className="ml-auto font-medium text-gray-600">
             Max {MAX}h per day across all projects

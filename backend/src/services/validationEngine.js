@@ -1,4 +1,4 @@
-const { isWeekend, differenceInCalendarDays, startOfDay } = require('date-fns');
+const { isWeekend, differenceInCalendarDays, startOfDay, isWithinInterval } = require('date-fns');
 const prisma = require('../config/database');
 const { MAX_HOURS_PER_DAY, MAX_DAYS_PAST, MAX_DAYS_FUTURE, EXCEPTION_TYPE, REQUEST_STATUS } = require('../utils/constants');
 
@@ -11,7 +11,7 @@ async function validateTimesheetEntry({ employeeId, projectId, entryDate, hours,
   const date = startOfDay(new Date(entryDate));
   const today = startOfDay(new Date());
 
-  // Rule 1: Date range restriction
+  // Rule 1: Date range restriction (max 2 weeks past, 1 week future)
   const daysDiff = differenceInCalendarDays(today, date);
   if (daysDiff > MAX_DAYS_PAST) {
     errors.push(`Entry date is more than ${MAX_DAYS_PAST} days in the past`);
@@ -67,7 +67,7 @@ async function validateTimesheetEntry({ employeeId, projectId, entryDate, hours,
     );
   }
 
-  // Rule 5: Allocation limit
+  // Rule 5: Allocation — check existence, time window, and hour limit
   if (projectId) {
     const allocation = await prisma.allocation.findFirst({
       where: { employeeId, projectId },
@@ -76,6 +76,17 @@ async function validateTimesheetEntry({ employeeId, projectId, entryDate, hours,
     if (!allocation) {
       errors.push('No active allocation found for this project');
     } else {
+      // Rule 5a: Entry date must fall within the allocation's permissible time window
+      const windowStart = startOfDay(new Date(allocation.startDate));
+      const windowEnd = startOfDay(new Date(allocation.endDate));
+      if (!isWithinInterval(date, { start: windowStart, end: windowEnd })) {
+        errors.push(
+          `Entry date is outside the permissible allocation window ` +
+          `(${windowStart.toISOString().slice(0, 10)} – ${windowEnd.toISOString().slice(0, 10)})`
+        );
+      }
+
+      // Rule 5b: Total hours must not exceed allocated hours (unless breach exception approved)
       const usedHours = await prisma.timesheetEntry.aggregate({
         where: {
           projectId,

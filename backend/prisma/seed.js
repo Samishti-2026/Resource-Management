@@ -84,11 +84,13 @@ async function main() {
     skipDuplicates: true,
   });
 
-  // Create allocations
+  // Create allocations (with permissible time window)
+  const allocStart = new Date(`${year}-01-01`);
+  const allocEnd = new Date(`${year}-12-31`);
   await prisma.allocation.createMany({
     data: [
-      { employeeId: emp1.id, projectId: project.id, allocatedHours: 160, createdBy: pm.id },
-      { employeeId: emp2.id, projectId: project.id, allocatedHours: 120, createdBy: pm.id },
+      { employeeId: emp1.id, projectId: project.id, allocatedHours: 160, startDate: allocStart, endDate: allocEnd, createdBy: pm.id },
+      { employeeId: emp2.id, projectId: project.id, allocatedHours: 120, startDate: allocStart, endDate: allocEnd, createdBy: pm.id },
     ],
     skipDuplicates: true,
   });

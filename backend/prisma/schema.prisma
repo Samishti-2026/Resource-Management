@@ -100,6 +100,8 @@ model Allocation {
   employeeId     Int
   projectId      Int
   allocatedHours Float
+  startDate      DateTime @db.Date
+  endDate        DateTime @db.Date
   createdBy      Int
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

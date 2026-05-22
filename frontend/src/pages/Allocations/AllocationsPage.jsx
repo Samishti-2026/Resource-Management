@@ -9,6 +9,7 @@ import { useForm } from 'react-hook-form';
 import Modal from '../../components/ui/Modal';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { PageLoader } from '../../components/ui/LoadingSpinner';
+import { formatDate } from '../../utils/dateHelpers';
 
 export default function AllocationsPage() {
   const { user } = useAuthStore();
@@ -67,7 +68,7 @@ export default function AllocationsPage() {
         <div>
           <h1 className="page-title">Allocations</h1>
           <p className="page-subtitle">
-            {canManage ? 'Assign project hours to team members' : 'Your project hour allocations'}
+            {canManage ? 'Assign project hours and time window to team members' : 'Your project hour allocations'}
           </p>
         </div>
         {canManage && (
@@ -94,12 +95,13 @@ export default function AllocationsPage() {
                 <th>Employee</th>
                 <th>Project</th>
                 <th>Allocated Hours</th>
+                <th>Time Window</th>
                 {canManage && <th>Actions</th>}
               </tr>
             </thead>
             <tbody>
               {allocations.length === 0 ? (
-                <tr><td colSpan={canManage ? 4 : 3}>
+                <tr><td colSpan={canManage ? 5 : 4}>
                   <div className="empty-state">
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -108,37 +110,57 @@ export default function AllocationsPage() {
                     {canManage && <span>Click "New Allocation" to assign hours</span>}
                   </div>
                 </td></tr>
-              ) : allocations.map((a) => (
-                <tr key={a.id}>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <div className="avatar avatar-sm flex-shrink-0">{a.employee?.name?.[0]}</div>
-                      <div className="min-w-0">
-                        <p className="font-medium text-gray-900 truncate">{a.employee?.name}</p>
-                        <p className="text-xs text-gray-400 truncate hidden sm:block">{a.employee?.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <span className="inline-flex items-center gap-1.5 text-xs">
-                      <span className="w-1.5 h-1.5 bg-blue-400 rounded-full flex-shrink-0" />
-                      {a.project?.name}
-                    </span>
-                  </td>
-                  <td>
-                    <span className="text-base font-bold text-blue-700">{a.allocatedHours}</span>
-                    <span className="text-xs text-gray-400 ml-1">hrs</span>
-                  </td>
-                  {canManage && (
+              ) : allocations.map((a) => {
+                const now = new Date();
+                const isActive = a.startDate && a.endDate
+                  ? now >= new Date(a.startDate) && now <= new Date(a.endDate)
+                  : true;
+                return (
+                  <tr key={a.id}>
                     <td>
-                      <div className="flex gap-1.5">
-                        <button className="btn btn-secondary btn-sm" onClick={() => setEditAlloc(a)}>Edit</button>
-                        <button className="btn btn-secondary btn-sm" style={{ color: '#dc2626' }} onClick={() => setDeleteTarget(a)}>Remove</button>
+                      <div className="flex items-center gap-2">
+                        <div className="avatar avatar-sm flex-shrink-0">{a.employee?.name?.[0]}</div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900 truncate">{a.employee?.name}</p>
+                          <p className="text-xs text-gray-400 truncate hidden sm:block">{a.employee?.email}</p>
+                        </div>
                       </div>
                     </td>
-                  )}
-                </tr>
-              ))}
+                    <td>
+                      <span className="inline-flex items-center gap-1.5 text-xs">
+                        <span className="w-1.5 h-1.5 bg-blue-400 rounded-full flex-shrink-0" />
+                        {a.project?.name}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="text-base font-bold text-blue-700">{a.allocatedHours}</span>
+                      <span className="text-xs text-gray-400 ml-1">hrs</span>
+                    </td>
+                    <td>
+                      {a.startDate && a.endDate ? (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-xs text-gray-700">
+                            {formatDate(a.startDate, 'dd MMM yyyy')} – {formatDate(a.endDate, 'dd MMM yyyy')}
+                          </span>
+                          <span className={`text-xs font-medium ${isActive ? 'text-green-600' : 'text-gray-400'}`}>
+                            {isActive ? '● Active' : '○ Inactive'}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
+                    </td>
+                    {canManage && (
+                      <td>
+                        <div className="flex gap-1.5">
+                          <button className="btn btn-secondary btn-sm" onClick={() => setEditAlloc(a)}>Edit</button>
+                          <button className="btn btn-secondary btn-sm" style={{ color: '#dc2626' }} onClick={() => setDeleteTarget(a)}>Remove</button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -152,8 +174,14 @@ export default function AllocationsPage() {
         projects={projects}
         employees={employees}
         onSubmit={(d) => {
-          const payload = { ...d, allocatedHours: parseFloat(d.allocatedHours) };
-          if (!editAlloc) { payload.employeeId = parseInt(d.employeeId); payload.projectId = parseInt(d.projectId); }
+          const payload = {
+            ...d,
+            allocatedHours: parseFloat(d.allocatedHours),
+          };
+          if (!editAlloc) {
+            payload.employeeId = parseInt(d.employeeId);
+            payload.projectId = parseInt(d.projectId);
+          }
           if (editAlloc) updateMutation.mutate({ id: editAlloc.id, data: payload });
           else createMutation.mutate(payload);
         }}
@@ -175,10 +203,22 @@ export default function AllocationsPage() {
 
 function AllocationModal({ isOpen, onClose, allocation, projects, employees, onSubmit, isLoading }) {
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
-    defaultValues: allocation ? { allocatedHours: allocation.allocatedHours } : {},
+    defaultValues: allocation
+      ? {
+          allocatedHours: allocation.allocatedHours,
+          startDate: allocation.startDate ? allocation.startDate.slice(0, 10) : '',
+          endDate: allocation.endDate ? allocation.endDate.slice(0, 10) : '',
+        }
+      : {},
   });
+
   return (
-    <Modal isOpen={isOpen} onClose={() => { onClose(); reset(); }} title={allocation ? `Edit Hours — ${allocation.employee?.name}` : 'New Allocation'} size="sm">
+    <Modal
+      isOpen={isOpen}
+      onClose={() => { onClose(); reset(); }}
+      title={allocation ? `Edit Allocation — ${allocation.employee?.name}` : 'New Allocation'}
+      size="sm"
+    >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {!allocation && (
           <>
@@ -200,6 +240,7 @@ function AllocationModal({ isOpen, onClose, allocation, projects, employees, onS
             </div>
           </>
         )}
+
         <div>
           <label className="label">Allocated Hours *</label>
           <input
@@ -211,10 +252,35 @@ function AllocationModal({ isOpen, onClose, allocation, projects, employees, onS
           {errors.allocatedHours && <p className="field-error">{errors.allocatedHours.message}</p>}
           <p className="text-xs text-gray-400 mt-1">Total hours the employee can log for this project</p>
         </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="label">Start Date *</label>
+            <input
+              {...register('startDate', { required: 'Required' })}
+              type="date"
+              className={`input ${errors.startDate ? 'input-error' : ''}`}
+            />
+            {errors.startDate && <p className="field-error">{errors.startDate.message}</p>}
+          </div>
+          <div>
+            <label className="label">End Date *</label>
+            <input
+              {...register('endDate', { required: 'Required' })}
+              type="date"
+              className={`input ${errors.endDate ? 'input-error' : ''}`}
+            />
+            {errors.endDate && <p className="field-error">{errors.endDate.message}</p>}
+          </div>
+        </div>
+        <p className="text-xs text-gray-400 -mt-2">
+          Employee can only log hours within this date range
+        </p>
+
         <div className="flex gap-2 justify-end pt-1">
           <button type="button" className="btn btn-secondary" onClick={() => { onClose(); reset(); }}>Cancel</button>
           <button type="submit" className="btn btn-primary" disabled={isLoading}>
-            {isLoading ? 'Saving…' : allocation ? 'Update Hours' : 'Create'}
+            {isLoading ? 'Saving…' : allocation ? 'Update Allocation' : 'Create'}
           </button>
         </div>
       </form>

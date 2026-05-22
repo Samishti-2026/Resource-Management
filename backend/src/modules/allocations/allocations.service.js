@@ -25,6 +25,8 @@ async function createAllocation(data, actorId) {
       employeeId: data.employeeId,
       projectId: data.projectId,
       allocatedHours: data.allocatedHours,
+      startDate: new Date(data.startDate),
+      endDate: new Date(data.endDate),
       createdBy: actorId,
     },
     include: {
@@ -44,6 +46,8 @@ async function updateAllocation(id, data, actorId) {
     where: { id },
     data: {
       ...(data.allocatedHours !== undefined && { allocatedHours: data.allocatedHours }),
+      ...(data.startDate !== undefined && { startDate: new Date(data.startDate) }),
+      ...(data.endDate !== undefined && { endDate: new Date(data.endDate) }),
     },
     include: {
       employee: { select: { id: true, name: true } },
