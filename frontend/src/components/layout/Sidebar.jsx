@@ -8,12 +8,12 @@ import { ROUTES } from '../../constants/routes';
 /* ─── Nav config per role ─────────────────────────────────────────────────── */
 const NAV = {
   EMPLOYEE: [
-    { to: ROUTES.DASHBOARD,     label: 'Dashboard',     icon: IconHome },
+    // { to: ROUTES.DASHBOARD,     label: 'Dashboard',     icon: IconHome },   // TODO: re-enable dashboard
     { to: ROUTES.TIMESHEETS,    label: 'My Timesheets', icon: IconTimesheet },
     { to: ROUTES.WORK_REQUESTS, label: 'Work Requests', icon: IconRequest },
   ],
   PROJECT_MANAGER: [
-    { to: ROUTES.DASHBOARD,     label: 'Dashboard',     icon: IconHome },
+    // { to: ROUTES.DASHBOARD,     label: 'Dashboard',     icon: IconHome },   // TODO: re-enable dashboard
     { to: ROUTES.TIMESHEETS,    label: 'Timesheets',    icon: IconTimesheet },
     { to: ROUTES.PROJECTS,      label: 'Projects',      icon: IconProject },
     { to: ROUTES.ALLOCATIONS,   label: 'Allocations',   icon: IconAlloc },
@@ -21,7 +21,7 @@ const NAV = {
     { to: ROUTES.REPORTS,       label: 'Reports',       icon: IconReport },
   ],
   RESOURCE_MANAGER: [
-    { to: ROUTES.DASHBOARD,     label: 'Dashboard',     icon: IconHome },
+    // { to: ROUTES.DASHBOARD,     label: 'Dashboard',     icon: IconHome },   // TODO: re-enable dashboard
     { to: ROUTES.PROJECTS,      label: 'Projects',      icon: IconProject },
     { to: ROUTES.USERS,         label: 'Users & Skills',icon: IconUsers },
     { to: ROUTES.ALLOCATIONS,   label: 'Allocations',   icon: IconAlloc },

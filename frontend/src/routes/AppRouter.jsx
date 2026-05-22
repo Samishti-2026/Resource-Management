@@ -10,7 +10,7 @@ import RoleRoute from './RoleRoute';
 
 // Pages
 import LoginPage            from '../pages/Login/LoginPage';
-import DashboardPage        from '../pages/Dashboard/DashboardPage';
+// import DashboardPage        from '../pages/Dashboard/DashboardPage'; // TODO: re-enable dashboard
 import TimesheetsPage       from '../pages/Timesheets/TimesheetsPage';
 import TimesheetDetailPage  from '../pages/Timesheets/TimesheetDetailPage';
 import ProjectsPage         from '../pages/Projects/ProjectsPage';
@@ -33,7 +33,7 @@ export default function AppRouter() {
           <Route element={<AppLayout />}>
 
             {/* Shared routes */}
-            <Route path={ROUTES.DASHBOARD}     element={<DashboardPage />} />
+            {/* <Route path={ROUTES.DASHBOARD}     element={<DashboardPage />} /> */}{/* TODO: re-enable dashboard */}
             <Route path={ROUTES.TIMESHEETS}    element={<TimesheetsPage />} />
             <Route path={ROUTES.TIMESHEET_DETAIL} element={<TimesheetDetailPage />} />
             <Route path={ROUTES.PROJECTS}      element={<ProjectsPage />} />
@@ -52,8 +52,8 @@ export default function AppRouter() {
         </Route>
 
         {/* Fallbacks */}
-        <Route path={ROUTES.ROOT} element={<Navigate to={ROUTES.DASHBOARD} replace />} />
-        <Route path="*"           element={<Navigate to={ROUTES.DASHBOARD} replace />} />
+        <Route path={ROUTES.ROOT} element={<Navigate to={ROUTES.PROJECTS} replace />} />
+        <Route path="*"           element={<Navigate to={ROUTES.PROJECTS} replace />} />
       </Routes>
     </BrowserRouter>
   );
