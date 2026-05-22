@@ -15,7 +15,7 @@ import TimesheetsPage       from '../pages/Timesheets/TimesheetsPage';
 import TimesheetDetailPage  from '../pages/Timesheets/TimesheetDetailPage';
 import ProjectsPage         from '../pages/Projects/ProjectsPage';
 import AllocationsPage      from '../pages/Allocations/AllocationsPage';
-import ExceptionsPage       from '../pages/Exceptions/ExceptionsPage';
+// import ExceptionsPage       from '../pages/Exceptions/ExceptionsPage'; // TODO: re-enable work requests
 import HolidaysPage         from '../pages/Holidays/HolidaysPage';
 import UsersPage            from '../pages/Users/UsersPage';
 import ReportsPage          from '../pages/Reports/ReportsPage';
@@ -38,7 +38,7 @@ export default function AppRouter() {
             <Route path={ROUTES.TIMESHEET_DETAIL} element={<TimesheetDetailPage />} />
             <Route path={ROUTES.PROJECTS}      element={<ProjectsPage />} />
             <Route path={ROUTES.ALLOCATIONS}   element={<AllocationsPage />} />
-            <Route path={ROUTES.WORK_REQUESTS} element={<ExceptionsPage />} />
+            {/* <Route path={ROUTES.WORK_REQUESTS} element={<ExceptionsPage />} /> */}{/* TODO: re-enable work requests */}
             <Route path={ROUTES.REPORTS}       element={<ReportsPage />} />
 
             {/* Resource Manager only */}
