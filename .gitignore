@@ -15,6 +15,7 @@ node_modules/
 # ── Build outputs ────────────────────────────────────────────────────────────
 dist/
 build/
+backend/frontend-dist/
 
 # ── Environment — NEVER commit secrets ───────────────────────────────────────
 .env
