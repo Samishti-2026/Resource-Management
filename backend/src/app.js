@@ -7,7 +7,7 @@ const rateLimit = require('express-rate-limit');
 const pinoHttp = require('pino-http');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
-
+const path = require('path');
 const env = require('./config/env');
 const logger = require('./config/logger');
 const errorHandler = require('./middleware/errorHandler');
@@ -147,6 +147,7 @@ app.use(`${API_PREFIX}/holidays`, holidaysRoutes);
 app.use(`${API_PREFIX}/reports`, reportsRoutes);
 app.use(`${API_PREFIX}/skills`, skillsRoutes);
 
+const PORT = env.PORT || 3333;
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ success: false, message: `Route ${req.method} ${req.path} not found` });
@@ -155,9 +156,10 @@ app.use((req, res) => {
 // Global error handler
 app.use(errorHandler);
 
-// Graceful shutdown
-const server = app.listen(env.PORT, () => {
-  logger.info(`Server running on port ${env.PORT} in ${env.NODE_ENV} mode`);
+
+// Graceful shutdown //0.0.0.0 allows external access in containerized environments
+const server = app.listen(PORT, '0.0.0.0', () => {
+  logger.info(`Server running on port ${PORT} in ${env.NODE_ENV} mode`);
 });
 
 process.on('SIGTERM', () => {

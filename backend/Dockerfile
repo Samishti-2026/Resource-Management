@@ -1,26 +1,58 @@
+# =========================
+# Base Image
+# =========================
 FROM node:20-alpine AS base
+
 WORKDIR /app
 
+# =========================
+# Install Dependencies
+# =========================
 FROM base AS deps
-COPY package*.json ./
-RUN npm ci --only=production
 
-FROM base AS build
 COPY package*.json ./
+
 RUN npm ci
+
+# =========================
+# Build Stage
+# =========================
+FROM base AS build
+
+COPY package*.json ./
+
+RUN npm ci
+
 COPY . .
+
+# Dummy DB URL only for prisma generate
+ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
+
+# Generate Prisma Client
 RUN npx prisma generate
 
-FROM base AS runner
+# =========================
+# Production Runner
+# =========================
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
 ENV NODE_ENV=production
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=build /app/src ./src
-COPY --from=build /app/prisma ./prisma
-COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
-COPY package.json ./
+ENV PORT=8080
 
-EXPOSE 3000
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
-  CMD wget -qO- http://localhost:3000/health || exit 1
+# Copy application
+COPY --from=build /app ./
 
+# Install wget for healthcheck
+RUN apk add --no-cache wget
+
+# Expose port
+EXPOSE 8080
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
+CMD wget -qO- http://localhost:${PORT}/health || exit 1
+
+# Start application
 CMD ["node", "src/app.js"]
