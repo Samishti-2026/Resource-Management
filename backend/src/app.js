@@ -23,7 +23,7 @@ const dashboardRoutes = require('./modules/dashboard/dashboard.routes');
 const holidaysRoutes = require('./modules/holidays/holidays.routes');
 const reportsRoutes = require('./modules/reports/reports.routes');
 const skillsRoutes = require('./modules/skills/skills.routes');
-
+const fs = require('fs');
 const app = express();
 
 // Security middleware
@@ -154,7 +154,7 @@ app.use('/api', (req, res) => {
 });
 
 // Serve React frontend in production
-const fs = require('fs');
+
 const frontendDist = path.join(__dirname, '../frontend-dist');
 
 if (env.NODE_ENV === 'production' && fs.existsSync(frontendDist)) {
