@@ -6,7 +6,6 @@ on:
       - dev-vishal
       - vishal-stage
       - vishal-prod
-
   workflow_dispatch:
 
 permissions:
@@ -37,12 +36,10 @@ jobs:
             echo "ENV_NAME=DEV" >> $GITHUB_ENV
             echo "WEBAPP_NAME=${{ secrets.AZURE_WEBAPP_NAME }}" >> $GITHUB_ENV
             echo "PUBLISH_PROFILE=${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}" >> $GITHUB_ENV
-
           elif [[ "${GITHUB_REF}" == "refs/heads/vishal-stage" ]]; then
             echo "ENV_NAME=STAGE" >> $GITHUB_ENV
             echo "WEBAPP_NAME=${{ secrets.STAGE_AZURE_WEBAPP_NAME }}" >> $GITHUB_ENV
             echo "PUBLISH_PROFILE=${{ secrets.STAGE_AZURE_WEBAPP_PUBLISH_PROFILE }}" >> $GITHUB_ENV
-
           elif [[ "${GITHUB_REF}" == "refs/heads/vishal-prod" ]]; then
             echo "ENV_NAME=PROD" >> $GITHUB_ENV
             echo "WEBAPP_NAME=${{ secrets.PROD_AZURE_WEBAPP_NAME }}" >> $GITHUB_ENV
@@ -87,9 +84,9 @@ jobs:
       # Verify GitHub CLI Auth
       # =========================
       - name: Verify GitHub CLI
-        run: gh auth status
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh auth status
 
       # =========================
       # Create PR: DEV → STAGE
@@ -104,7 +101,7 @@ jobs:
             --head dev-vishal \
             --title "Promote DEV to STAGE" \
             --body "Automated PR after successful DEV deployment" \
-          || echo "PR already exists"
+          || true
 
       # =========================
       # Create PR: STAGE → PROD
@@ -119,4 +116,4 @@ jobs:
             --head vishal-stage \
             --title "Promote STAGE to PROD" \
             --body "Automated PR after successful STAGE deployment" \
-          || echo "PR already exists"
+          || true
