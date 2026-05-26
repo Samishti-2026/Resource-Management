@@ -12,6 +12,20 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # Full history required for secret scanning diff
+          fetch-depth: 0
+
+      # ── Secret scanning — must pass before any build or deploy ────────────
+      # Scans the diff between the previous commit and HEAD for leaked secrets.
+      # Fails the pipeline if any are found, preventing deployment.
+      - name: Scan for secrets
+        uses: trufflesecurity/trufflehog@v3.88.1
+        with:
+          path: ./
+          base: ${{ github.event.before }}
+          head: ${{ github.sha }}
+          extra_args: --only-verified
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

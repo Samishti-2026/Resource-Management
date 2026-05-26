@@ -27,7 +27,10 @@ const remove = async (req, res, next) => {
  * Upload holidays from Excel file.
  * Expected columns (any order, header row required):
  *   Date (dd/mm/yyyy or yyyy-mm-dd)  |  Holiday Name
+ * Maximum 500 data rows processed per upload.
  */
+const MAX_EXCEL_ROWS = 500;
+
 const uploadExcel = async (req, res, next) => {
   try {
     if (!req.file) return error(res, 'No file uploaded', 400);
@@ -55,8 +58,10 @@ const uploadExcel = async (req, res, next) => {
     });
 
     const holidays = [];
+    let dataRowCount = 0;
     sheet.eachRow((row, rowNum) => {
       if (rowNum <= headerRowNum) return; // skip header
+      if (dataRowCount >= MAX_EXCEL_ROWS) return; // cap rows to prevent memory exhaustion
       const rawDate = row.getCell(dateCol).value;
       const rawName = row.getCell(nameCol).value;
       if (!rawDate || !rawName) return;
@@ -85,7 +90,10 @@ const uploadExcel = async (req, res, next) => {
       const mm   = String(parsedDate.getMonth() + 1).padStart(2, '0');
       const dd   = String(parsedDate.getDate()).padStart(2, '0');
 
-      holidays.push({ date: `${yyyy}-${mm}-${dd}`, name: String(rawName).trim() });
+      // Enforce max name length (matches bulkHolidaySchema)
+      const name = String(rawName).trim().slice(0, 100);
+      holidays.push({ date: `${yyyy}-${mm}-${dd}`, name });
+      dataRowCount++;
     });
 
     if (holidays.length === 0) {

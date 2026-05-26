@@ -5,8 +5,10 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+// refreshToken is now sent via HttpOnly cookie.
+// Body field is kept optional for backwards-compatibility during migration.
 const refreshSchema = z.object({
-  refreshToken: z.string().min(1, 'Refresh token is required'),
+  refreshToken: z.string().optional(),
 });
 
 module.exports = { loginSchema, refreshSchema };

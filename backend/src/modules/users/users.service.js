@@ -77,10 +77,10 @@ async function updateUser(id, data, actorId) {
   if (!existing) throw Object.assign(new Error('User not found'), { statusCode: 404 });
 
   const updateData = {};
-  if (data.name) updateData.name = data.name;
-  if (data.roleId) updateData.roleId = data.roleId;
+  if (data.name)              updateData.name     = data.name;
+  if (data.roleId)            updateData.roleId   = data.roleId;
   if (data.isActive !== undefined) updateData.isActive = data.isActive;
-  if (data.password) updateData.passwordHash = await bcrypt.hash(data.password, env.BCRYPT_ROUNDS);
+  if (data.password)          updateData.passwordHash = await bcrypt.hash(data.password, env.BCRYPT_ROUNDS);
 
   const updated = await prisma.user.update({
     where: { id },
@@ -88,7 +88,18 @@ async function updateUser(id, data, actorId) {
     include: { role: true },
   });
 
-  await logAudit({ userId: actorId, action: 'UPDATE_USER', entityType: 'User', entityId: id, oldValue: existing, newValue: updateData });
+  // ── P2-8: Strip passwordHash from audit log values ────────────────────────
+  const { passwordHash: _oldHash, ...safeOldValue } = existing;
+  const { passwordHash: _newHash, ...safeNewValue } = updateData;
+
+  await logAudit({
+    userId:     actorId,
+    action:     'UPDATE_USER',
+    entityType: 'User',
+    entityId:   id,
+    oldValue:   safeOldValue,
+    newValue:   safeNewValue,
+  });
 
   return { id: updated.id, name: updated.name, email: updated.email, role: updated.role.name, isActive: updated.isActive };
 }
@@ -102,10 +113,33 @@ async function deleteUser(id, actorId) {
 }
 
 async function assignSkills(userId, skillIds, actorId) {
-  // Remove existing and re-assign
-  await prisma.userSkill.deleteMany({ where: { userId } });
-  const data = skillIds.map((skillId) => ({ userId, skillId }));
-  await prisma.userSkill.createMany({ data, skipDuplicates: true });
+  // ── P3-5: Validate all skillIds exist before making any DB changes ────────
+  if (skillIds.length > 0) {
+    const found = await prisma.skill.findMany({
+      where:  { id: { in: skillIds } },
+      select: { id: true },
+    });
+    if (found.length !== skillIds.length) {
+      const foundIds   = found.map((s) => s.id);
+      const invalidIds = skillIds.filter((id) => !foundIds.includes(id));
+      throw Object.assign(
+        new Error(`Invalid skill ID(s): ${invalidIds.join(', ')}`),
+        { statusCode: 400 }
+      );
+    }
+  }
+
+  // Replace all skill assignments atomically
+  await prisma.$transaction(async (tx) => {
+    await tx.userSkill.deleteMany({ where: { userId } });
+    if (skillIds.length > 0) {
+      await tx.userSkill.createMany({
+        data: skillIds.map((skillId) => ({ userId, skillId })),
+        skipDuplicates: true,
+      });
+    }
+  });
+
   await logAudit({ userId: actorId, action: 'ASSIGN_SKILLS', entityType: 'User', entityId: userId, newValue: { skillIds } });
 }
 

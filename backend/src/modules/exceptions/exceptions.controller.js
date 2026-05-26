@@ -17,14 +17,22 @@ const create = async (req, res, next) => {
 
 const approve = async (req, res, next) => {
   try {
-    const exception = await exceptionsService.approveException(parseInt(req.params.id), req.user.id);
+    const exception = await exceptionsService.approveException(
+      parseInt(req.params.id),
+      req.user.id,
+      req.user.role,  // passed for PM scope check
+    );
     return success(res, exception, 'Exception request approved');
   } catch (err) { next(err); }
 };
 
 const reject = async (req, res, next) => {
   try {
-    const exception = await exceptionsService.rejectException(parseInt(req.params.id), req.user.id);
+    const exception = await exceptionsService.rejectException(
+      parseInt(req.params.id),
+      req.user.id,
+      req.user.role,  // passed for PM scope check
+    );
     return success(res, exception, 'Exception request rejected');
   } catch (err) { next(err); }
 };

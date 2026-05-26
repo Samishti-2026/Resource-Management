@@ -55,6 +55,7 @@ const approve = async (req, res, next) => {
     const ts = await timesheetsService.approveTimesheet(
       parseInt(req.params.id),
       req.user.id,
+      req.user.role,   // passed for PM scope check
       req.body.remarks,
     );
     return success(res, ts, 'Timesheet approved');
@@ -63,7 +64,12 @@ const approve = async (req, res, next) => {
 
 const reject = async (req, res, next) => {
   try {
-    const ts = await timesheetsService.rejectTimesheet(parseInt(req.params.id), req.body.reason, req.user.id);
+    const ts = await timesheetsService.rejectTimesheet(
+      parseInt(req.params.id),
+      req.body.reason,
+      req.user.id,
+      req.user.role,   // passed for PM scope check
+    );
     return success(res, ts, 'Timesheet rejected');
   } catch (err) { next(err); }
 };

@@ -12,37 +12,28 @@ const schema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
-const DEMO = [
-  { role: 'Resource Manager', email: 'sahil@samishti.com',   pw: 'Password123!' },
-  { role: 'Project Manager',  email: 'shashank@samishti.com',   pw: 'Password123!' },
-  { role: 'Employee',         email: 'vishal@samishti.com', pw: 'Password123!' },
-];
-
 export default function LoginPage() {
   const { setAuth, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
   const [serverError, setServerError] = useState('');
 
-  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm({
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(schema),
   });
 
-  if (isAuthenticated) return <Navigate to={ROUTES.DASHBOARD} replace />;
+  if (isAuthenticated) return <Navigate to={ROUTES.PROJECTS} replace />;
 
   const onSubmit = async ({ email, password }) => {
     setServerError('');
     try {
       const result = await login(email, password);
+      // result = { accessToken, user }
+      // refreshToken is in an HttpOnly cookie — never touches JS
       setAuth(result.user, result.accessToken);
-      navigate(ROUTES.DASHBOARD);
+      navigate(ROUTES.PROJECTS);
     } catch (err) {
       setServerError(err.response?.data?.message || 'Invalid email or password');
     }
-  };
-
-  const fillDemo = (email, pw) => {
-    setValue('email', email);
-    setValue('password', pw);
   };
 
   return (
@@ -99,31 +90,15 @@ export default function LoginPage() {
               className="btn btn-primary w-full py-2.5 mt-1"
             >
               {isSubmitting
-                ? <span className="flex items-center gap-2 justify-center">
+                ? (
+                  <span className="flex items-center gap-2 justify-center">
                     <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     Signing in…
                   </span>
+                )
                 : 'Sign in'}
             </button>
           </form>
-
-          {/* Demo credentials */}
-          <div className="mt-5 pt-4 border-t border-gray-100">
-            <p className="text-xs font-medium text-gray-400 mb-2">Demo accounts — click to fill</p>
-            <div className="space-y-1.5">
-              {DEMO.map((d) => (
-                <button
-                  key={d.email}
-                  type="button"
-                  onClick={() => fillDemo(d.email, d.pw)}
-                  className="w-full text-left px-3 py-2 rounded-lg bg-gray-50 hover:bg-blue-50 border border-gray-100 hover:border-blue-200 transition-colors"
-                >
-                  <span className="text-xs font-medium text-gray-700">{d.role}</span>
-                  <span className="text-xs text-gray-400 ml-2">{d.email}</span>
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </div>

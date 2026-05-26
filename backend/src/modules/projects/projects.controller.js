@@ -24,7 +24,12 @@ const create = async (req, res, next) => {
 
 const update = async (req, res, next) => {
   try {
-    const project = await projectsService.updateProject(parseInt(req.params.id), req.body, req.user.id);
+    const project = await projectsService.updateProject(
+      parseInt(req.params.id),
+      req.body,
+      req.user.id,
+      req.user.role,  // passed for PM scope check
+    );
     return success(res, project, 'Project updated successfully');
   } catch (err) { next(err); }
 };
@@ -45,14 +50,24 @@ const getMembers = async (req, res, next) => {
 
 const addMember = async (req, res, next) => {
   try {
-    const member = await projectsService.addMember(parseInt(req.params.id), req.body.employeeId, req.user.id);
+    const member = await projectsService.addMember(
+      parseInt(req.params.id),
+      req.body.employeeId,
+      req.user.id,
+      req.user.role,  // passed for PM scope check
+    );
     return created(res, member, 'Member added successfully');
   } catch (err) { next(err); }
 };
 
 const removeMember = async (req, res, next) => {
   try {
-    await projectsService.removeMember(parseInt(req.params.id), parseInt(req.params.uid), req.user.id);
+    await projectsService.removeMember(
+      parseInt(req.params.id),
+      parseInt(req.params.uid),
+      req.user.id,
+      req.user.role,  // passed for PM scope check
+    );
     return success(res, null, 'Member removed successfully');
   } catch (err) { next(err); }
 };
