@@ -25,7 +25,6 @@ const reportsRoutes = require('./modules/reports/reports.routes');
 const skillsRoutes = require('./modules/skills/skills.routes');
 const fs = require('fs');
 const app = express();
-// hello world 
 // Security middleware
 app.use(helmet({
   contentSecurityPolicy: {
@@ -39,7 +38,7 @@ app.use(helmet({
   },
 }));
 
-// CORS configuration
+
 app.use(cors({
   origin: env.CORS_ORIGIN,
   credentials: true,
