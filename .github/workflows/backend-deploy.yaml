@@ -8,6 +8,7 @@ on:
       - vishal-prod
     paths:
       - 'backend/**'
+      - '.github/workflows/backend-deploy.yaml'
 
 jobs:
   build-and-deploy:
