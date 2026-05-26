@@ -10,13 +10,18 @@ on:
       - 'backend/**'
       - '.github/workflows/backend-deploy.yaml'
 
+# permissions must be top-level, NOT nested under "on:"
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     defaults:
       run:
-        working-directory: backend
+        working-directory: backend 
 
     steps:
       - name: Checkout Code
@@ -27,7 +32,7 @@ jobs:
       # =========================
       - name: Set Environment
         run: |
-          if [[ "${GITHUB_REF}" == "refs/heads/vishal-dev" ]]; then
+          if [[ "${GITHUB_REF}" == "refs/heads/dev-vishal" ]]; then
             echo "ENV_NAME=DEV" >> $GITHUB_ENV
             echo "WEBAPP_NAME=${{ secrets.AZURE_WEBAPP_NAME }}" >> $GITHUB_ENV
             echo "PUBLISH_PROFILE=${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}" >> $GITHUB_ENV
@@ -81,12 +86,12 @@ jobs:
       # Create PR: DEV → STAGE
       # =========================
       - name: Create PR from DEV to STAGE
-        if: github.ref == 'refs/heads/vishal-dev'
+        if: github.ref == 'refs/heads/dev-vishal'
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          branch: vishal-dev
-          base: staging
+          branch: dev-vishal
+          base: vishal-stage
           title: "Promote DEV to STAGE"
           body: "Automated PR after successful DEV deployment"
 
@@ -94,11 +99,11 @@ jobs:
       # Create PR: STAGE → PROD
       # =========================
       - name: Create PR from STAGE to PROD
-        if: github.ref == 'refs/heads/staging'
+        if: github.ref == 'refs/heads/vishal-stage'
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          branch: staging
+          branch: vishal-stage
           base: vishal-prod
           title: "Promote STAGE to PROD"
           body: "Automated PR after successful STAGE deployment"
