@@ -24,7 +24,12 @@ const create = async (req, res, next) => {
 
 const saveEntries = async (req, res, next) => {
   try {
-    const ts = await timesheetsService.saveEntries(parseInt(req.params.id), req.body.entries, req.user.id);
+    const ts = await timesheetsService.saveEntries(
+      parseInt(req.params.id),
+      req.body.entries,
+      req.user.id,
+      req.body.remarks,
+    );
     return success(res, ts, 'Entries saved');
   } catch (err) { next(err); }
 };
@@ -47,7 +52,11 @@ const submit = async (req, res, next) => {
 
 const approve = async (req, res, next) => {
   try {
-    const ts = await timesheetsService.approveTimesheet(parseInt(req.params.id), req.user.id);
+    const ts = await timesheetsService.approveTimesheet(
+      parseInt(req.params.id),
+      req.user.id,
+      req.body.remarks,
+    );
     return success(res, ts, 'Timesheet approved');
   } catch (err) { next(err); }
 };

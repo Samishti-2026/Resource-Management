@@ -32,14 +32,18 @@ export default function AppRouter() {
         <Route element={<PrivateRoute />}>
           <Route element={<AppLayout />}>
 
-            {/* Shared routes */}
+            {/* Shared routes — all authenticated users */}
             {/* <Route path={ROUTES.DASHBOARD}     element={<DashboardPage />} /> */}{/* TODO: re-enable dashboard */}
-            <Route path={ROUTES.TIMESHEETS}    element={<TimesheetsPage />} />
+            <Route path={ROUTES.TIMESHEETS}       element={<TimesheetsPage />} />
             <Route path={ROUTES.TIMESHEET_DETAIL} element={<TimesheetDetailPage />} />
-            <Route path={ROUTES.PROJECTS}      element={<ProjectsPage />} />
-            <Route path={ROUTES.ALLOCATIONS}   element={<AllocationsPage />} />
+            <Route path={ROUTES.ALLOCATIONS}      element={<AllocationsPage />} />
             {/* <Route path={ROUTES.WORK_REQUESTS} element={<ExceptionsPage />} /> */}{/* TODO: re-enable work requests */}
-            <Route path={ROUTES.REPORTS}       element={<ReportsPage />} />
+            <Route path={ROUTES.REPORTS}          element={<ReportsPage />} />
+
+            {/* Resource Manager + Project Manager only */}
+            <Route element={<RoleRoute allowedRoles={['RESOURCE_MANAGER', 'PROJECT_MANAGER']} />}>
+              <Route path={ROUTES.PROJECTS} element={<ProjectsPage />} />
+            </Route>
 
             {/* Resource Manager only */}
             <Route element={<RoleRoute allowedRoles={['RESOURCE_MANAGER']} />}>

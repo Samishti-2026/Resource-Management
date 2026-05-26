@@ -126,6 +126,7 @@ model Timesheet {
   weekEnd      DateTime        @db.Date
   weekNumber   Int
   status       TimesheetStatus @default(DRAFT)
+  remarks      String?
   submittedAt  DateTime?
   reviewedAt   DateTime?
   reviewedBy   Int?

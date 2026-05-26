@@ -72,7 +72,7 @@ app.use(pinoHttp({ logger }));
 
 // ── Swagger API Documentation ─────────────────────────────────────────────
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-  customSiteTitle: 'TimesheetPro API Docs',
+  customSiteTitle: 'Resource Management API Docs',
   customCss: `
     .swagger-ui .topbar { background: #1e293b; }
     .swagger-ui .topbar .download-url-wrapper { display: none; }

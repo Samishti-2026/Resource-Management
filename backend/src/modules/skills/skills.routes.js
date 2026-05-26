@@ -2,7 +2,9 @@ const express = require('express');
 const router = express.Router();
 const skillsService = require('./skills.service');
 const authenticate = require('../../middleware/authenticate');
-const authorize = require('../../middleware/authorize');
+const authorize    = require('../../middleware/authorize');
+const validate     = require('../../middleware/validate');
+const { createSkillSchema, updateSkillSchema } = require('./skills.validator');
 const { success, created } = require('../../utils/apiResponse');
 
 router.use(authenticate);
@@ -63,7 +65,7 @@ router.get('/', async (req, res, next) => {
  *       409:
  *         description: Skill name already exists
  */
-router.post('/', authorize('RESOURCE_MANAGER'), async (req, res, next) => {
+router.post('/', authorize('RESOURCE_MANAGER'), validate(createSkillSchema), async (req, res, next) => {
   try { return created(res, await skillsService.createSkill(req.body, req.user.id)); } catch (e) { next(e); }
 });
 
@@ -90,7 +92,7 @@ router.post('/', authorize('RESOURCE_MANAGER'), async (req, res, next) => {
  *       404:
  *         $ref: '#/components/responses/NotFound'
  */
-router.patch('/:id', authorize('RESOURCE_MANAGER'), async (req, res, next) => {
+router.patch('/:id', authorize('RESOURCE_MANAGER'), validate(updateSkillSchema), async (req, res, next) => {
   try { return success(res, await skillsService.updateSkill(parseInt(req.params.id), req.body, req.user.id)); } catch (e) { next(e); }
 });
 

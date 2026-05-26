@@ -43,7 +43,7 @@ async function getProjectById(id, user) {
       },
       allocations: {
         include: { employee: { select: { id: true, name: true } } },
-        orderBy: { periodStart: 'desc' },
+        orderBy: { createdAt: 'desc' },
       },
     },
   });
@@ -108,7 +108,14 @@ async function removeMember(projectId, employeeId, actorId) {
 async function getProjectMembers(projectId) {
   return prisma.projectMember.findMany({
     where: { projectId },
-    include: { employee: { select: { id: true, name: true, email: true, role: true } } },
+    include: {
+      employee: {
+        select: {
+          id: true, name: true, email: true, role: true,
+          skills: { include: { skill: { select: { id: true, name: true } } } },
+        },
+      },
+    },
   });
 }
 

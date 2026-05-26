@@ -56,9 +56,10 @@ export const API = {
 
   // Holidays
   HOLIDAYS: {
-    BASE: `${API_BASE}/holidays`,
-    BULK: `${API_BASE}/holidays/bulk`,
-    BY_ID: (id) => `${API_BASE}/holidays/${id}`,
+    BASE:   `${API_BASE}/holidays`,
+    BULK:   `${API_BASE}/holidays/bulk`,
+    UPLOAD: `${API_BASE}/holidays/upload`,
+    BY_ID:  (id) => `${API_BASE}/holidays/${id}`,
   },
 
   // Skills

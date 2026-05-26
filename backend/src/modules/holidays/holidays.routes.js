@@ -1,108 +1,37 @@
 const express = require('express');
-const router = express.Router();
-const ctrl = require('./holidays.controller');
+const router  = express.Router();
+const multer  = require('multer');
+const ctrl    = require('./holidays.controller');
 const authenticate = require('../../middleware/authenticate');
-const authorize = require('../../middleware/authorize');
+const authorize    = require('../../middleware/authorize');
+const validate     = require('../../middleware/validate');
+const { bulkHolidaySchema } = require('./holidays.validator');
+
+// Memory storage — buffer passed directly to ExcelJS
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (req, file, cb) => {
+    const ok = file.mimetype.includes('spreadsheet') ||
+               file.mimetype.includes('excel') ||
+               file.originalname.endsWith('.xlsx') ||
+               file.originalname.endsWith('.xls');
+    cb(ok ? null : new Error('Only Excel files (.xlsx / .xls) are accepted'), ok);
+  },
+});
 
 router.use(authenticate);
 
-/**
- * @swagger
- * /holidays:
- *   get:
- *     tags: [Holidays]
- *     summary: List company holidays
- *     description: Returns all holidays. Optionally filter by year. Used by the timesheet validation engine.
- *     parameters:
- *       - name: year
- *         in: query
- *         schema: { type: integer, example: 2026 }
- *         description: Filter by calendar year
- *     responses:
- *       200:
- *         description: Holiday list
- *         content:
- *           application/json:
- *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/SuccessResponse'
- *                 - type: object
- *                   properties:
- *                     data:
- *                       type: array
- *                       items: { $ref: '#/components/schemas/Holiday' }
- *             example:
- *               success: true
- *               message: Success
- *               data:
- *                 - id: 1
- *                   holidayDate: "2026-12-25"
- *                   holidayName: "Christmas Day"
- *                 - id: 2
- *                   holidayDate: "2026-01-01"
- *                   holidayName: "New Year's Day"
- */
-router.get('/', ctrl.list);
+// GET  /holidays          — list (all authenticated)
+router.get('/',        ctrl.list);
 
-/**
- * @swagger
- * /holidays/bulk:
- *   post:
- *     tags: [Holidays]
- *     summary: Bulk create or update holidays
- *     description: |
- *       Creates multiple holidays at once. If a holiday already exists on a given date, it is updated (upsert).
- *       Used to upload the annual company holiday calendar.
- *       **Resource Manager only.**
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/BulkHolidayRequest'
- *           example:
- *             holidays:
- *               - date: "2026-12-25"
- *                 name: "Christmas Day"
- *               - date: "2026-12-26"
- *                 name: "Boxing Day"
- *               - date: "2027-01-01"
- *                 name: "New Year's Day"
- *     responses:
- *       201:
- *         description: Holidays saved
- *         content:
- *           application/json:
- *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/SuccessResponse'
- *                 - type: object
- *                   properties:
- *                     data:
- *                       type: array
- *                       items: { $ref: '#/components/schemas/Holiday' }
- *       403:
- *         $ref: '#/components/responses/Forbidden'
- */
-router.post('/bulk', authorize('RESOURCE_MANAGER'), ctrl.bulkCreate);
+// POST /holidays/bulk     — manual JSON bulk upsert (RM only)
+router.post('/bulk',   authorize('RESOURCE_MANAGER'), validate(bulkHolidaySchema), ctrl.bulkCreate);
 
-/**
- * @swagger
- * /holidays/{id}:
- *   delete:
- *     tags: [Holidays]
- *     summary: Delete a holiday
- *     description: Removes a holiday from the calendar. **Resource Manager only.**
- *     parameters:
- *       - $ref: '#/components/parameters/IdParam'
- *     responses:
- *       200:
- *         description: Holiday deleted
- *       404:
- *         $ref: '#/components/responses/NotFound'
- *       403:
- *         $ref: '#/components/responses/Forbidden'
- */
-router.delete('/:id', authorize('RESOURCE_MANAGER'), ctrl.remove);
+// POST /holidays/upload   — Excel file upload (RM only)
+router.post('/upload', authorize('RESOURCE_MANAGER'), upload.single('file'), ctrl.uploadExcel);
+
+// DELETE /holidays/:id    — delete one (RM only)
+router.delete('/:id',  authorize('RESOURCE_MANAGER'), ctrl.remove);
 
 module.exports = router;

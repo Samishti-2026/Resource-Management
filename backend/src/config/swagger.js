@@ -4,7 +4,7 @@ const options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'TimesheetPro API',
+      title: 'Resource Management API',
       version: '1.0.0',
       description: `
 ## Enterprise Timesheet & Resource Management System
@@ -34,8 +34,8 @@ Obtain a token via \`POST /auth/login\`. Access tokens expire in **15 minutes**.
 5. Cannot exceed **allocated hours** without an approved exception request
       `,
       contact: {
-        name: 'TimesheetPro Support',
-        email: 'support@timesheetpro.com',
+        name: 'Resource Management Support',
+        email: 'support@Resource Management.com',
       },
       license: {
         name: 'MIT',
@@ -51,7 +51,7 @@ Obtain a token via \`POST /auth/login\`. Access tokens expire in **15 minutes**.
         description: 'Development server — Health check',
       },
       {
-        url: 'https://api.timesheetpro.com/api/v1',
+        url: 'https://api.Resource Management.com/api/v1',
         description: 'Production server',
       },
     ],

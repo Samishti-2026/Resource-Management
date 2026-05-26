@@ -54,7 +54,7 @@ export default function Navbar({ onMobileMenuClick }) {
 
   const title = Object.entries(PAGE_TITLES).find(([path]) =>
     location.pathname === path || location.pathname.startsWith(path + '/')
-  )?.[1] ?? 'TimesheetPro';
+  )?.[1] ?? 'Resource Management';
 
   const handleLogout = async () => {
     setProfileOpen(false);
@@ -191,7 +191,7 @@ export default function Navbar({ onMobileMenuClick }) {
 
             {/* Footer */}
             <div className="px-4 py-2 bg-gray-50 border-t border-gray-100">
-              <p className="text-xs text-gray-400">TimesheetPro v1.0.0</p>
+              <p className="text-xs text-gray-400">Resource Management v1.0.0</p>
             </div>
           </div>
         )}

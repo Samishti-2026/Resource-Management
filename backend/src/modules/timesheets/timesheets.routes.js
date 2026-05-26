@@ -4,7 +4,7 @@ const ctrl = require('./timesheets.controller');
 const authenticate = require('../../middleware/authenticate');
 const authorize = require('../../middleware/authorize');
 const validate = require('../../middleware/validate');
-const { createTimesheetSchema, saveEntriesSchema, rejectSchema } = require('./timesheets.validator');
+const { createTimesheetSchema, saveEntriesSchema, rejectSchema, approveSchema } = require('./timesheets.validator');
 
 router.use(authenticate);
 
@@ -218,7 +218,7 @@ router.post('/:id/copy-previous', authorize('EMPLOYEE'), ctrl.copyPrevious);
  *       403:
  *         $ref: '#/components/responses/Forbidden'
  */
-router.post('/:id/approve', authorize('PROJECT_MANAGER', 'RESOURCE_MANAGER'), ctrl.approve);
+router.post('/:id/approve', authorize('PROJECT_MANAGER', 'RESOURCE_MANAGER'), validate(approveSchema), ctrl.approve);
 
 /**
  * @swagger

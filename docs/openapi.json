@@ -1,12 +1,12 @@
 ﻿{
     "openapi":  "3.0.0",
     "info":  {
-                 "title":  "TimesheetPro API",
+                 "title":  "Resource Management API",
                  "version":  "1.0.0",
                  "description":  "\n## Enterprise Timesheet \u0026 Resource Management System\n\nA complete REST API for managing employee timesheets, project allocations, approvals, and resource utilization.\n\n### Authentication\nAll protected endpoints require a **Bearer JWT token** in the Authorization header:\n```\nAuthorization: Bearer \u003caccess_token\u003e\n```\n\nObtain a token via `POST /auth/login`. Access tokens expire in **15 minutes**. Use `POST /auth/refresh` to get a new one.\n\n### Roles \u0026 Permissions\n| Role | Description |\n|------|-------------|\n| `RESOURCE_MANAGER` | Full org access — creates projects, manages users, uploads holidays |\n| `PROJECT_MANAGER` | Team access — manages allocations, approves timesheets |\n| `EMPLOYEE` | Self access — submits timesheets, raises work requests |\n\n### Validation Rules\n1. Entries cannot be more than **14 days in the past** or **7 days in the future**\n2. **Weekend** entries require an approved exception request\n3. **Holiday** entries require an approved exception request\n4. Maximum **12 hours per day** across all projects\n5. Cannot exceed **allocated hours** without an approved exception request\n      ",
                  "contact":  {
-                                 "name":  "TimesheetPro Support",
-                                 "email":  "support@timesheetpro.com"
+                                 "name":  "Resource Management Support",
+                                 "email":  "support@Resource Management.com"
                              },
                  "license":  {
                                  "name":  "MIT"
@@ -22,7 +22,7 @@
                         "description":  "Development server — Health check"
                     },
                     {
-                        "url":  "https://api.timesheetpro.com/api/v1",
+                        "url":  "https://api.Resource Management.com/api/v1",
                         "description":  "Production server"
                     }
                 ],

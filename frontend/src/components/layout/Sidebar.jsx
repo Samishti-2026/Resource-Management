@@ -10,6 +10,7 @@ const NAV = {
   EMPLOYEE: [
     // { to: ROUTES.DASHBOARD,     label: 'Dashboard',     icon: IconHome },   // TODO: re-enable dashboard
     { to: ROUTES.TIMESHEETS,    label: 'My Timesheets', icon: IconTimesheet },
+    { to: ROUTES.REPORTS,       label: 'Reports',       icon: IconReport },
     // { to: ROUTES.WORK_REQUESTS, label: 'Work Requests', icon: IconRequest }, // TODO: re-enable work requests
   ],
   PROJECT_MANAGER: [
@@ -67,7 +68,7 @@ export default function Sidebar({ onClose }) {
         </div>
         {sidebarOpen && (
           <div className="overflow-hidden">
-            <p className="font-semibold text-sm leading-tight">TimesheetPro</p>
+            <p className="font-semibold text-sm leading-tight">Resource Management</p>
             <p className="text-xs text-gray-400 leading-tight">Enterprise</p>
           </div>
         )}

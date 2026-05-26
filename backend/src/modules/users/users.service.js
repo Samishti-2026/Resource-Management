@@ -14,7 +14,13 @@ async function listUsers(query) {
       { email: { contains: query.search, mode: 'insensitive' } },
     ];
   }
-  if (query.isActive !== undefined) where.isActive = query.isActive === 'true';
+  // When filtering by role (dropdown use), only return active users
+  // When no filter (admin list), respect explicit isActive param
+  if (query.role) {
+    where.isActive = true;
+  } else if (query.isActive !== undefined) {
+    where.isActive = query.isActive === 'true';
+  }
 
   const [users, total] = await Promise.all([
     prisma.user.findMany({
@@ -43,7 +49,7 @@ async function getUserById(id) {
       skills: { include: { skill: true } },
       allocations: {
         include: { project: { select: { id: true, name: true } } },
-        orderBy: { periodStart: 'desc' },
+        orderBy: { createdAt: 'desc' },
         take: 10,
       },
     },

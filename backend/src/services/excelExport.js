@@ -38,29 +38,36 @@ async function generateEmployeeReport(data, employeeName, from, to) {
   sheet.addRow([]);
 
   // Column headers
-  const headerRow = sheet.addRow(['Date', 'Project', 'Hours', 'Status', 'Week Start', 'Notes']);
+  const headerRow = sheet.addRow(['Date', 'Day', 'Project', 'Hours', 'Status', 'Week Start', 'Week End', 'Notes']);
   headerRow.eachCell((cell) => {
     Object.assign(cell, headerStyle);
   });
 
   sheet.columns = [
-    { key: 'date', width: 15 },
-    { key: 'project', width: 30 },
-    { key: 'hours', width: 10 },
-    { key: 'status', width: 15 },
+    { key: 'date',      width: 15 },
+    { key: 'day',       width: 12 },
+    { key: 'project',   width: 30 },
+    { key: 'hours',     width: 10 },
+    { key: 'status',    width: 15 },
     { key: 'weekStart', width: 15 },
-    { key: 'notes', width: 40 },
+    { key: 'weekEnd',   width: 15 },
+    { key: 'notes',     width: 35 },
   ];
 
   // Data rows
   data.forEach((row, idx) => {
+    const entryDate  = new Date(row.entryDate);
+    const weekStart  = new Date(row.weekStart);
+    const weekEnd    = new Date(new Date(row.weekStart).setDate(weekStart.getDate() + 6));
     const dataRow = sheet.addRow({
-      date: format(new Date(row.entryDate), 'dd MMM yyyy'),
-      project: row.projectName,
-      hours: row.hours,
-      status: row.status,
-      weekStart: format(new Date(row.weekStart), 'dd MMM yyyy'),
-      notes: row.notes || '',
+      date:      format(entryDate,  'dd MMM yyyy'),
+      day:       format(entryDate,  'EEE'),
+      project:   row.projectName,
+      hours:     row.hours,
+      status:    row.status,
+      weekStart: format(weekStart,  'dd MMM yyyy'),
+      weekEnd:   format(weekEnd,    'dd MMM yyyy'),
+      notes:     row.notes || '',
     });
 
     if (idx % 2 === 0) {

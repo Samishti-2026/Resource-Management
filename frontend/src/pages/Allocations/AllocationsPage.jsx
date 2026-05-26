@@ -2,68 +2,62 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAllocations, createAllocation, updateAllocation, deleteAllocation } from '../../services/allocationService';
 import { getProjects } from '../../services/projectService';
-import { getUsers } from '../../services/userService';
 import { useAuthStore } from '../../store/authStore';
 import { useToast } from '../../hooks/useToast';
-import { useForm } from 'react-hook-form';
-import Modal from '../../components/ui/Modal';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { PageLoader } from '../../components/ui/LoadingSpinner';
 import { formatDate } from '../../utils/dateHelpers';
+import AllocationModal from '../../components/forms/AllocationModal';
 
 export default function AllocationsPage() {
-  const { user } = useAuthStore();
-  const toast = useToast();
-  const qc = useQueryClient();
+  const { user }  = useAuthStore();
+  const toast     = useToast();
+  const qc        = useQueryClient();
   const canManage = ['RESOURCE_MANAGER', 'PROJECT_MANAGER'].includes(user?.role);
 
-  const [showModal, setShowModal] = useState(false);
-  const [editAlloc, setEditAlloc] = useState(null);
-  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [showModal,     setShowModal    ] = useState(false);
+  const [editAlloc,     setEditAlloc    ] = useState(null);
+  const [deleteTarget,  setDeleteTarget ] = useState(null);
   const [projectFilter, setProjectFilter] = useState('');
 
+  /* ── Queries ──────────────────────────────────────────────────────────── */
   const { data: allocData, isLoading } = useQuery({
     queryKey: ['allocations', { projectId: projectFilter }],
-    queryFn: () => getAllocations({ projectId: projectFilter || undefined }),
+    queryFn:  () => getAllocations({ projectId: projectFilter || undefined }),
   });
 
   const { data: projectsData } = useQuery({
     queryKey: ['projects', { status: 'ACTIVE', limit: 100 }],
-    queryFn: () => getProjects({ status: 'ACTIVE', limit: 100 }),
+    queryFn:  () => getProjects({ status: 'ACTIVE', limit: 100 }),
   });
 
-  const { data: employeesData } = useQuery({
-    queryKey: ['users', { role: 'EMPLOYEE', limit: 100 }],
-    queryFn: () => getUsers({ role: 'EMPLOYEE', limit: 100 }),
-    enabled: canManage,
-  });
-
+  /* ── Mutations ────────────────────────────────────────────────────────── */
   const createMutation = useMutation({
     mutationFn: createAllocation,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['allocations'] }); toast.success('Allocation created'); setShowModal(false); },
-    onError: (e) => toast.error(e.response?.data?.message || 'Failed'),
+    onError:   (e) => toast.error(e.response?.data?.message || 'Failed'),
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => updateAllocation(id, data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['allocations'] }); toast.success('Updated'); setEditAlloc(null); },
-    onError: (e) => toast.error(e.response?.data?.message || 'Failed'),
+    onError:   (e) => toast.error(e.response?.data?.message || 'Failed'),
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteAllocation,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['allocations'] }); toast.success('Removed'); setDeleteTarget(null); },
-    onError: (e) => toast.error(e.response?.data?.message || 'Failed'),
+    onError:   (e) => toast.error(e.response?.data?.message || 'Failed'),
   });
 
   if (isLoading) return <PageLoader />;
 
-  const allocations = allocData || [];
-  const projects = projectsData?.projects || [];
-  const employees = employeesData?.users || [];
+  const allocations = allocData  || [];
+  const projects    = projectsData?.projects || [];
 
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="page-header">
         <div>
           <h1 className="page-title">Allocations</h1>
@@ -79,7 +73,8 @@ export default function AllocationsPage() {
       {/* Filter */}
       <div className="filter-bar">
         <label className="text-xs font-medium text-gray-500">Project:</label>
-        <select className="input" style={{ width: '14rem' }} value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
+        <select className="input" style={{ width: '16rem' }}
+          value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
           <option value="">All Projects</option>
           {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
@@ -107,11 +102,11 @@ export default function AllocationsPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <p>No allocations found</p>
-                    {canManage && <span>Click "New Allocation" to assign hours</span>}
+                    {canManage && <span>Select a project first, then click "New Allocation"</span>}
                   </div>
                 </td></tr>
               ) : allocations.map((a) => {
-                const now = new Date();
+                const now      = new Date();
                 const isActive = a.startDate && a.endDate
                   ? now >= new Date(a.startDate) && now <= new Date(a.endDate)
                   : true;
@@ -154,7 +149,8 @@ export default function AllocationsPage() {
                       <td>
                         <div className="flex gap-1.5">
                           <button className="btn btn-secondary btn-sm" onClick={() => setEditAlloc(a)}>Edit</button>
-                          <button className="btn btn-secondary btn-sm" style={{ color: '#dc2626' }} onClick={() => setDeleteTarget(a)}>Remove</button>
+                          <button className="btn btn-secondary btn-sm" style={{ color: '#dc2626' }}
+                            onClick={() => setDeleteTarget(a)}>Remove</button>
                         </div>
                       </td>
                     )}
@@ -166,24 +162,17 @@ export default function AllocationsPage() {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Allocation modal — extracted component */}
       <AllocationModal
         isOpen={showModal || !!editAlloc}
         onClose={() => { setShowModal(false); setEditAlloc(null); }}
         allocation={editAlloc}
         projects={projects}
-        employees={employees}
         onSubmit={(d) => {
-          const payload = {
-            ...d,
-            allocatedHours: parseFloat(d.allocatedHours),
-          };
-          if (!editAlloc) {
-            payload.employeeId = parseInt(d.employeeId);
-            payload.projectId = parseInt(d.projectId);
-          }
+          const payload = { ...d, allocatedHours: parseFloat(d.allocatedHours) };
+          if (!editAlloc) { payload.employeeId = parseInt(d.employeeId); payload.projectId = parseInt(d.projectId); }
           if (editAlloc) updateMutation.mutate({ id: editAlloc.id, data: payload });
-          else createMutation.mutate(payload);
+          else           createMutation.mutate(payload);
         }}
         isLoading={createMutation.isPending || updateMutation.isPending}
       />
@@ -198,92 +187,5 @@ export default function AllocationsPage() {
         danger
       />
     </div>
-  );
-}
-
-function AllocationModal({ isOpen, onClose, allocation, projects, employees, onSubmit, isLoading }) {
-  const { register, handleSubmit, reset, formState: { errors } } = useForm({
-    defaultValues: allocation
-      ? {
-          allocatedHours: allocation.allocatedHours,
-          startDate: allocation.startDate ? allocation.startDate.slice(0, 10) : '',
-          endDate: allocation.endDate ? allocation.endDate.slice(0, 10) : '',
-        }
-      : {},
-  });
-
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={() => { onClose(); reset(); }}
-      title={allocation ? `Edit Allocation — ${allocation.employee?.name}` : 'New Allocation'}
-      size="sm"
-    >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {!allocation && (
-          <>
-            <div>
-              <label className="label">Employee *</label>
-              <select {...register('employeeId', { required: 'Required' })} className={`input ${errors.employeeId ? 'input-error' : ''}`}>
-                <option value="">Select employee…</option>
-                {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-              </select>
-              {errors.employeeId && <p className="field-error">{errors.employeeId.message}</p>}
-            </div>
-            <div>
-              <label className="label">Project *</label>
-              <select {...register('projectId', { required: 'Required' })} className={`input ${errors.projectId ? 'input-error' : ''}`}>
-                <option value="">Select project…</option>
-                {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-              {errors.projectId && <p className="field-error">{errors.projectId.message}</p>}
-            </div>
-          </>
-        )}
-
-        <div>
-          <label className="label">Allocated Hours *</label>
-          <input
-            {...register('allocatedHours', { required: 'Required', min: { value: 1, message: 'Min 1' } })}
-            type="number" step="0.5" min="1"
-            className={`input ${errors.allocatedHours ? 'input-error' : ''}`}
-            placeholder="e.g. 160"
-          />
-          {errors.allocatedHours && <p className="field-error">{errors.allocatedHours.message}</p>}
-          <p className="text-xs text-gray-400 mt-1">Total hours the employee can log for this project</p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="label">Start Date *</label>
-            <input
-              {...register('startDate', { required: 'Required' })}
-              type="date"
-              className={`input ${errors.startDate ? 'input-error' : ''}`}
-            />
-            {errors.startDate && <p className="field-error">{errors.startDate.message}</p>}
-          </div>
-          <div>
-            <label className="label">End Date *</label>
-            <input
-              {...register('endDate', { required: 'Required' })}
-              type="date"
-              className={`input ${errors.endDate ? 'input-error' : ''}`}
-            />
-            {errors.endDate && <p className="field-error">{errors.endDate.message}</p>}
-          </div>
-        </div>
-        <p className="text-xs text-gray-400 -mt-2">
-          Employee can only log hours within this date range
-        </p>
-
-        <div className="flex gap-2 justify-end pt-1">
-          <button type="button" className="btn btn-secondary" onClick={() => { onClose(); reset(); }}>Cancel</button>
-          <button type="submit" className="btn btn-primary" disabled={isLoading}>
-            {isLoading ? 'Saving…' : allocation ? 'Update Allocation' : 'Create'}
-          </button>
-        </div>
-      </form>
-    </Modal>
   );
 }

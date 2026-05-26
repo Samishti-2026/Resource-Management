@@ -83,14 +83,14 @@ async function upsertTimesheet(employeeId, weekStartStr) {
   });
 }
 
-async function saveEntries(timesheetId, entries, actorId) {
+async function saveEntries(timesheetId, entries, actorId, remarks) {
   const timesheet = await prisma.timesheet.findUnique({ where: { id: timesheetId } });
   if (!timesheet) throw Object.assign(new Error('Timesheet not found'), { statusCode: 404 });
   if (!['DRAFT', 'REJECTED'].includes(timesheet.status)) {
     throw Object.assign(new Error('Cannot edit a submitted or approved timesheet'), { statusCode: 400 });
   }
 
-  // Replace all entries for this timesheet
+  // Replace all entries and update remarks in one transaction
   await prisma.$transaction(async (tx) => {
     await tx.timesheetEntry.deleteMany({ where: { timesheetId } });
     if (entries.length > 0) {
@@ -102,6 +102,13 @@ async function saveEntries(timesheetId, entries, actorId) {
           hours: e.hours,
           notes: e.notes || null,
         })),
+      });
+    }
+    // Save remarks if provided
+    if (remarks !== undefined) {
+      await tx.timesheet.update({
+        where: { id: timesheetId },
+        data: { remarks: remarks || null },
       });
     }
   });
@@ -143,7 +150,7 @@ async function submitTimesheet(timesheetId, actorId) {
   return updated;
 }
 
-async function approveTimesheet(timesheetId, actorId) {
+async function approveTimesheet(timesheetId, actorId, approveRemarks) {
   const timesheet = await prisma.timesheet.findUnique({
     where: { id: timesheetId },
     include: { employee: { include: { projectMemberships: true } } },
@@ -155,7 +162,13 @@ async function approveTimesheet(timesheetId, actorId) {
 
   const updated = await prisma.timesheet.update({
     where: { id: timesheetId },
-    data: { status: 'APPROVED', reviewedAt: new Date(), reviewedBy: actorId, rejectReason: null },
+    data: {
+      status: 'APPROVED',
+      reviewedAt: new Date(),
+      reviewedBy: actorId,
+      rejectReason: null,
+      ...(approveRemarks !== undefined && { remarks: approveRemarks || null }),
+    },
   });
 
   await logAudit({ userId: actorId, action: 'APPROVE_TIMESHEET', entityType: 'Timesheet', entityId: timesheetId });

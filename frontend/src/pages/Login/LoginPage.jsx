@@ -13,9 +13,9 @@ const schema = z.object({
 });
 
 const DEMO = [
-  { role: 'Resource Manager', email: 'rm@company.com',   pw: 'Password123!' },
-  { role: 'Project Manager',  email: 'pm@company.com',   pw: 'Password123!' },
-  { role: 'Employee',         email: 'emp1@company.com', pw: 'Password123!' },
+  { role: 'Resource Manager', email: 'sahil@samishti.com',   pw: 'Password123!' },
+  { role: 'Project Manager',  email: 'shashank@samishti.com',   pw: 'Password123!' },
+  { role: 'Employee',         email: 'vishal@samishti.com', pw: 'Password123!' },
 ];
 
 export default function LoginPage() {
@@ -54,7 +54,7 @@ export default function LoginPage() {
           <div className="inline-flex w-14 h-14 bg-blue-500 rounded-2xl items-center justify-center shadow-lg mb-4">
             <span className="text-white font-bold text-xl">TS</span>
           </div>
-          <h1 className="text-2xl font-bold text-white">TimesheetPro</h1>
+          <h1 className="text-2xl font-bold text-white">Resource Management</h1>
           <p className="text-blue-300 text-sm mt-1">Enterprise Resource Management</p>
         </div>
 
