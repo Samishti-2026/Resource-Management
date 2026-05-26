@@ -154,7 +154,6 @@ app.use('/api', (req, res) => {
 });
 
 // Serve React frontend in production
-const path = require('path');
 const fs = require('fs');
 const frontendDist = path.join(__dirname, '../frontend-dist');
 
