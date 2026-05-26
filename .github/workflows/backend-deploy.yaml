@@ -10,7 +10,6 @@ on:
       - 'backend/**'
       - '.github/workflows/backend-deploy.yaml'
 
-# permissions must be top-level, NOT nested under "on:"
 permissions:
   contents: write
   pull-requests: write
@@ -21,9 +20,12 @@ jobs:
 
     defaults:
       run:
-        working-directory: backend 
+        working-directory: backend
 
     steps:
+      # =========================
+      # Checkout Code
+      # =========================
       - name: Checkout Code
         uses: actions/checkout@v4
 
@@ -36,12 +38,10 @@ jobs:
             echo "ENV_NAME=DEV" >> $GITHUB_ENV
             echo "WEBAPP_NAME=${{ secrets.AZURE_WEBAPP_NAME }}" >> $GITHUB_ENV
             echo "PUBLISH_PROFILE=${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}" >> $GITHUB_ENV
-
           elif [[ "${GITHUB_REF}" == "refs/heads/vishal-stage" ]]; then
             echo "ENV_NAME=STAGE" >> $GITHUB_ENV
             echo "WEBAPP_NAME=${{ secrets.STAGE_AZURE_WEBAPP_NAME }}" >> $GITHUB_ENV
             echo "PUBLISH_PROFILE=${{ secrets.STAGE_AZURE_WEBAPP_PUBLISH_PROFILE }}" >> $GITHUB_ENV
-
           elif [[ "${GITHUB_REF}" == "refs/heads/vishal-prod" ]]; then
             echo "ENV_NAME=PROD" >> $GITHUB_ENV
             echo "WEBAPP_NAME=${{ secrets.PROD_AZURE_WEBAPP_NAME }}" >> $GITHUB_ENV
@@ -87,23 +87,25 @@ jobs:
       # =========================
       - name: Create PR from DEV to STAGE
         if: github.ref == 'refs/heads/dev-vishal'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: dev-vishal
-          base: vishal-stage
-          title: "Promote DEV to STAGE"
-          body: "Automated PR after successful DEV deployment"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --base vishal-stage \
+            --head dev-vishal \
+            --title "Promote DEV to STAGE" \
+            --body "Automated PR after successful DEV deployment"
 
       # =========================
       # Create PR: STAGE → PROD
       # =========================
       - name: Create PR from STAGE to PROD
         if: github.ref == 'refs/heads/vishal-stage'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: vishal-stage
-          base: vishal-prod
-          title: "Promote STAGE to PROD"
-          body: "Automated PR after successful STAGE deployment"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --base vishal-prod \
+            --head vishal-stage \
+            --title "Promote STAGE to PROD" \
+            --body "Automated PR after successful STAGE deployment"
