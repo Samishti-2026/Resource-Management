@@ -3,7 +3,9 @@ name: Backend CI/CD
 on:
   push:
     branches:
-      - dev-vishal
+      - vishal-dev
+      - vishal-stage
+      - vishal-prod
     paths:
       - 'backend/**'
 
@@ -19,6 +21,30 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # =========================
+      # Set Environment Variables
+      # =========================
+      - name: Set Environment
+        run: |
+          if [[ "${GITHUB_REF}" == "refs/heads/vishal-dev" ]]; then
+            echo "ENV_NAME=DEV" >> $GITHUB_ENV
+            echo "WEBAPP_NAME=${{ secrets.AZURE_WEBAPP_NAME }}" >> $GITHUB_ENV
+            echo "PUBLISH_PROFILE=${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}" >> $GITHUB_ENV
+
+          elif [[ "${GITHUB_REF}" == "refs/heads/vishal-stage" ]]; then
+            echo "ENV_NAME=STAGE" >> $GITHUB_ENV
+            echo "WEBAPP_NAME=${{ secrets.STAGE_AZURE_WEBAPP_NAME }}" >> $GITHUB_ENV
+            echo "PUBLISH_PROFILE=${{ secrets.STAGE_AZURE_WEBAPP_PUBLISH_PROFILE }}" >> $GITHUB_ENV
+
+          elif [[ "${GITHUB_REF}" == "refs/heads/vishal-prod" ]]; then
+            echo "ENV_NAME=PROD" >> $GITHUB_ENV
+            echo "WEBAPP_NAME=${{ secrets.PROD_AZURE_WEBAPP_NAME }}" >> $GITHUB_ENV
+            echo "PUBLISH_PROFILE=${{ secrets.PROD_AZURE_WEBAPP_PUBLISH_PROFILE }}" >> $GITHUB_ENV
+          fi
+
+      # =========================
+      # Login to ACR
+      # =========================
       - name: Login to Azure Container Registry
         uses: docker/login-action@v3
         with:
@@ -26,17 +52,52 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
+      # =========================
+      # Build Docker Image
+      # =========================
       - name: Build Docker Image
         run: |
           docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/backend:${{ github.sha }} .
 
+      # =========================
+      # Push Docker Image
+      # =========================
       - name: Push Docker Image
         run: |
           docker push ${{ secrets.ACR_LOGIN_SERVER }}/backend:${{ github.sha }}
 
+      # =========================
+      # Deploy to Azure Web App
+      # =========================
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          app-name: ${{ env.WEBAPP_NAME }}
+          publish-profile: ${{ env.PUBLISH_PROFILE }}
           images: ${{ secrets.ACR_LOGIN_SERVER }}/backend:${{ github.sha }}
+
+      # =========================
+      # Create PR: DEV → STAGE
+      # =========================
+      - name: Create PR from DEV to STAGE
+        if: github.ref == 'refs/heads/vishal-dev'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: vishal-dev
+          base: staging
+          title: "Promote DEV to STAGE"
+          body: "Automated PR after successful DEV deployment"
+
+      # =========================
+      # Create PR: STAGE → PROD
+      # =========================
+      - name: Create PR from STAGE to PROD
+        if: github.ref == 'refs/heads/staging'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: staging
+          base: vishal-prod
+          title: "Promote STAGE to PROD"
+          body: "Automated PR after successful STAGE deployment"
