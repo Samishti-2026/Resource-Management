@@ -23,10 +23,9 @@ const dashboardRoutes = require('./modules/dashboard/dashboard.routes');
 const holidaysRoutes = require('./modules/holidays/holidays.routes');
 const reportsRoutes = require('./modules/reports/reports.routes');
 const skillsRoutes = require('./modules/skills/skills.routes');
-
+const fs = require('fs');
 const app = express();
-
-// Security middleware
+// Security middleware // Adjusted CSP for React frontend and external resources
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -38,6 +37,8 @@ app.use(helmet({
     },
   },
 }));
+
+
 app.use(cors({
   origin: env.CORS_ORIGIN,
   credentials: true,
@@ -86,7 +87,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
     tryItOutEnabled: true,
   },
 }));
-
+//h elo wrld
 // Serve raw OpenAPI JSON spec
 app.get('/api-docs.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
@@ -154,8 +155,7 @@ app.use('/api', (req, res) => {
 });
 
 // Serve React frontend in production
-const path = require('path');
-const fs = require('fs');
+
 const frontendDist = path.join(__dirname, '../frontend-dist');
 
 if (env.NODE_ENV === 'production' && fs.existsSync(frontendDist)) {
