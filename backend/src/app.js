@@ -25,7 +25,6 @@ const reportsRoutes = require('./modules/reports/reports.routes');
 const skillsRoutes = require('./modules/skills/skills.routes');
 const fs = require('fs');
 const app = express();
-// Security middleware // Adjusted CSP for React frontend and external resources- new
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
