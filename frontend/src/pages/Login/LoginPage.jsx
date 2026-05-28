@@ -43,7 +43,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex w-14 h-14 bg-blue-500 rounded-2xl items-center justify-center shadow-lg mb-4">
-            <span className="text-white font-bold text-xl">TS</span>
+            <img src="/icon.png" alt="Logo" className="text-white font-bold text-xl" />
           </div>
           <h1 className="text-2xl font-bold text-white">Resource Management</h1>
           <p className="text-blue-300 text-sm mt-1">Enterprise Resource Management</p>

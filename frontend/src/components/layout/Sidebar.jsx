@@ -64,7 +64,7 @@ export default function Sidebar({ onClose }) {
       {/* ── Logo ──────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2.5 px-3.5 py-4 border-b border-white/10 flex-shrink-0">
         <div className="w-7 h-7 bg-blue-500 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0 shadow">
-          TS
+           <img src="/icon.png" alt="Logo" className="text-white font-bold text-xl" />
         </div>
         {sidebarOpen && (
           <div className="overflow-hidden">
