@@ -61,31 +61,31 @@ app.use(cors({
 
 // ── Rate limiters ─────────────────────────────────────────────────────────────
 // Auth endpoints: strict limit shared across login, refresh, and logout
-const authLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 10,
-  message: { success: false, message: 'Too many requests, please try again later' },
-  standardHeaders: true,
-  legacyHeaders: false,
+// const authLimiter = rateLimit({
+//   windowMs: 60 * 1000, // 1 minute
+//   max: 100000,
+//   message: { success: false, message: 'Too many requests, please try again later' },
+//   standardHeaders: true,
+//   legacyHeaders: false,
   // Key by email (body) for login to prevent per-account brute-force,
   // fall back to IP for other auth routes
-  keyGenerator: (req) => {
-    if (req.path === '/login' && req.body?.email) {
-      return req.body.email.toLowerCase();
-    }
-    return req.ip;
-  },
-});
+//   keyGenerator: (req) => {
+//     if (req.path === '/login' && req.body?.email) {
+//       return req.body.email.toLowerCase();
+//     }
+//     return req.ip;
+//   },
+// });
 
 // General API rate limiter
-const generalLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 200,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+// const generalLimiter = rateLimit({
+//   windowMs: 60 * 1000,
+//   max: 2000000,
+//   standardHeaders: true,
+//   legacyHeaders: false,
+// });
 
-app.use(generalLimiter);
+//app.use(generalLimiter);
 app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -179,7 +179,7 @@ app.get('/health', async (req, res) => {
 const API_PREFIX = '/api/v1';
 
 // Auth routes get the strict authLimiter (covers login, refresh, logout)
-app.use(`${API_PREFIX}/auth`,        authLimiter, authRoutes);
+app.use(`${API_PREFIX}/auth`, authRoutes);
 app.use(`${API_PREFIX}/users`,       usersRoutes);
 app.use(`${API_PREFIX}/projects`,    projectsRoutes);
 app.use(`${API_PREFIX}/allocations`, allocationsRoutes);
