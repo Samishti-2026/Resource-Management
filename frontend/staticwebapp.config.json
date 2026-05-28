@@ -2,11 +2,11 @@
   "routes": [
     {
       "route": "/api/*",
-      "rewrite": "https://resource-utility-bpaxa2d3g8cpg5cg.centralindia-01.azurewebsites.net/api/*"
+      "rewrite": "https://resource-management.onrender.com/api/*"
     },
     {
       "route": "/health",
-      "rewrite": "https://resource-utility-bpaxa2d3g8cpg5cg.centralindia-01.azurewebsites.net/health"
+      "rewrite": "https://resource-management.onrender.com/health"
     },
     {
       "route": "/*",

@@ -1,17 +1,17 @@
 require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
+const express    = require('express');
+const cors       = require('cors');
+const helmet     = require('helmet');
 const cookieParser = require('cookie-parser');
-const rateLimit = require('express-rate-limit');
-const pinoHttp = require('pino-http');
+const rateLimit  = require('express-rate-limit');
+const pinoHttp   = require('pino-http');
 const { v4: uuidv4 } = require('uuid');
 
-const env = require('./config/env');
-const logger = require('./config/logger');
+const env         = require('./config/env');
+const logger      = require('./config/logger');
 const errorHandler = require('./middleware/errorHandler');
 
-// Route modules
+// ── Route modules ─────────────────────────────────────────────────────────────
 const authRoutes        = require('./modules/auth/auth.routes');
 const usersRoutes       = require('./modules/users/users.routes');
 const projectsRoutes    = require('./modules/projects/projects.routes');
@@ -25,26 +25,25 @@ const skillsRoutes      = require('./modules/skills/skills.routes');
 
 const app = express();
 
-// ── Trust proxy — required for correct req.ip behind Azure / IIS / nginx ─────
-// Without this, rate limiters and audit logs record the proxy IP, not the client IP.
+// ── Trust proxy ───────────────────────────────────────────────────────────────
+// Required for correct req.ip behind Render / nginx / load balancers.
+// Without this, rate limiters record the proxy IP, not the real client IP.
 app.set('trust proxy', 1);
 
 // ── Security headers ──────────────────────────────────────────────────────────
-// Apply strict CSP globally. Swagger UI (dev only) gets its own relaxed policy below.
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc:  ["'self'"],
-      scriptSrc:   ["'self'"],
-      styleSrc:    ["'self'"],
-      imgSrc:      ["'self'", 'data:'],
-      connectSrc:  ["'self'"],
-      objectSrc:   ["'none'"],
-      frameAncestors: ["'none'"],
+      defaultSrc:              ["'self'"],
+      scriptSrc:               ["'self'"],
+      styleSrc:                ["'self'"],
+      imgSrc:                  ["'self'", 'data:'],
+      connectSrc:              ["'self'"],
+      objectSrc:               ["'none'"],
+      frameAncestors:          ["'none'"],
       upgradeInsecureRequests: [],
     },
   },
-  // HSTS: 1 year, include subdomains
   hsts: {
     maxAge: 31536000,
     includeSubDomains: true,
@@ -53,44 +52,60 @@ app.use(helmet({
 }));
 
 app.use(cors({
-  origin: env.CORS_ORIGIN,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  origin:         env.CORS_ORIGIN,
+  credentials:    true,
+  methods:        ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 // ── Rate limiters ─────────────────────────────────────────────────────────────
-// Auth endpoints: strict limit shared across login, refresh, and logout
-// const authLimiter = rateLimit({
-//   windowMs: 60 * 1000, // 1 minute
-//   max: 100000,
-//   message: { success: false, message: 'Too many requests, please try again later' },
-//   standardHeaders: true,
-//   legacyHeaders: false,
-  // Key by email (body) for login to prevent per-account brute-force,
-  // fall back to IP for other auth routes
-//   keyGenerator: (req) => {
-//     if (req.path === '/login' && req.body?.email) {
-//       return req.body.email.toLowerCase();
-//     }
-//     return req.ip;
-//   },
-// });
+// NODE_ENV=test  → very high limits so JMeter load tests aren't throttled
+// NODE_ENV=production → strict limits to protect against brute-force & DDoS
+// NODE_ENV=development → relaxed limits for local dev
 
-// General API rate limiter
-// const generalLimiter = rateLimit({
-//   windowMs: 60 * 1000,
-//   max: 2000000,
-//   standardHeaders: true,
-//   legacyHeaders: false,
-// });
+const isTest = env.NODE_ENV === 'test';
+const isProd = env.NODE_ENV === 'production';
 
-//app.use(generalLimiter);
+// Auth limiter — covers /login, /refresh, /logout
+// Production: 10 attempts per minute per email/IP (stops brute-force)
+// Test:       100,000 per minute (effectively unlimited for JMeter)
+const authLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max:      isTest ? 100000 : isProd ? 10 : 100,
+  message:  { success: false, message: 'Too many login attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders:   false,
+  skipSuccessfulRequests: true, // successful logins don't count toward the limit
+  keyGenerator: (req) => {
+    // key by email for /login to prevent per-account brute-force
+    // fall back to IP for /refresh and /logout
+    if (req.path === '/login' && req.body?.email) {
+      return req.body.email.toLowerCase();
+    }
+    return req.ip;
+  },
+});
+
+// General limiter — applied to all /api/* routes
+// Production: 200 req/min per IP
+// Test:       1,000,000 per minute (effectively unlimited for JMeter 500 threads)
+const generalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max:      isTest ? 1000000 : isProd ? 200 : 2000,
+  standardHeaders: true,
+  legacyHeaders:   false,
+  skip: (req) => req.path === '/health', // never throttle health checks (used by load balancers)
+});
+
+// Apply general limiter to all API routes
+app.use('/api', generalLimiter);
+
 app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// ── Correlation ID — thread a unique request ID through every log line ────────
+// ── Correlation ID ────────────────────────────────────────────────────────────
+// Threads a unique request ID through every log line for easy debugging
 app.use((req, res, next) => {
   req.requestId = req.headers['x-request-id'] || uuidv4();
   res.setHeader('X-Request-Id', req.requestId);
@@ -101,16 +116,18 @@ app.use((req, res, next) => {
 app.use(pinoHttp({
   logger,
   genReqId: (req) => req.requestId,
+  // Skip health check logs — they're noisy and useless in production logs
+  autoLogging: {
+    ignore: (req) => req.url === '/health',
+  },
 }));
 
-// ── Swagger API Documentation — development only ──────────────────────────────
-// Never expose the full API schema, endpoint inventory, or example credentials
-// to unauthenticated users in production.
-if (env.NODE_ENV !== 'production') {
+// ── Swagger — development only ────────────────────────────────────────────────
+// Never expose the full API schema in production (endpoint inventory = attack surface)
+if (!isProd) {
   const swaggerUi   = require('swagger-ui-express');
   const swaggerSpec = require('./config/swagger');
 
-  // Relaxed CSP for Swagger UI (inline scripts/styles required by swagger-ui-express)
   app.use('/api-docs', helmet({
     contentSecurityPolicy: {
       directives: {
@@ -130,9 +147,9 @@ if (env.NODE_ENV !== 'production') {
       .swagger-ui .scheme-container { background: #f8fafc; padding: 12px; border-radius: 8px; }
     `,
     swaggerOptions: {
-      persistAuthorization: true,
+      persistAuthorization:   true,
       displayRequestDuration: true,
-      filter: true,
+      filter:       true,
       tryItOutEnabled: true,
     },
   }));
@@ -142,23 +159,11 @@ if (env.NODE_ENV !== 'production') {
     res.send(swaggerSpec);
   });
 
-  logger.info('Swagger UI available at /api-docs (development only)');
+  logger.info('Swagger UI available at /api-docs (non-production only)');
 }
 
 // ── Health check ──────────────────────────────────────────────────────────────
-/**
- * @swagger
- * /health:
- *   get:
- *     tags: [Health]
- *     summary: Server health check
- *     security: []
- *     responses:
- *       200:
- *         description: Server is healthy
- *       503:
- *         description: Database unreachable
- */
+// Used by load balancers, Docker, and CI pipelines to verify liveness
 app.get('/health', async (req, res) => {
   const prisma = require('./config/database');
   try {
@@ -166,11 +171,12 @@ app.get('/health', async (req, res) => {
     res.json({
       status:    'ok',
       db:        'connected',
+      env:       env.NODE_ENV,
       uptime:    Math.floor(process.uptime()),
       timestamp: new Date().toISOString(),
     });
   } catch {
-    // Do NOT expose the raw DB error — it may contain connection string details
+    // Never expose raw DB error — may contain connection string details
     res.status(503).json({ status: 'error', db: 'disconnected' });
   }
 });
@@ -178,8 +184,8 @@ app.get('/health', async (req, res) => {
 // ── API routes ────────────────────────────────────────────────────────────────
 const API_PREFIX = '/api/v1';
 
-// Auth routes get the strict authLimiter (covers login, refresh, logout)
-app.use(`${API_PREFIX}/auth`, authRoutes);
+// Auth gets the strict authLimiter on top of the general limiter
+app.use(`${API_PREFIX}/auth`,        authLimiter, authRoutes);
 app.use(`${API_PREFIX}/users`,       usersRoutes);
 app.use(`${API_PREFIX}/projects`,    projectsRoutes);
 app.use(`${API_PREFIX}/allocations`, allocationsRoutes);
@@ -195,13 +201,16 @@ app.use('/api', (req, res) => {
   res.status(404).json({ success: false, message: `Route ${req.method} ${req.path} not found` });
 });
 
-// ── Serve React frontend in production ────────────────────────────────────────
+// ── React frontend — production only ─────────────────────────────────────────
 const path = require('path');
 const fs   = require('fs');
 const frontendDist = path.join(__dirname, '../frontend-dist');
 
-if (env.NODE_ENV === 'production' && fs.existsSync(frontendDist)) {
-  app.use(express.static(frontendDist));
+if (isProd && fs.existsSync(frontendDist)) {
+  app.use(express.static(frontendDist, {
+    maxAge: '1y',  // cache JS/CSS/images for 1 year (Vite uses content hashes)
+    etag:   true,
+  }));
   app.get('/{*splat}', (req, res) => {
     res.sendFile(path.join(frontendDist, 'index.html'));
   });
@@ -219,16 +228,42 @@ const server = app.listen(env.PORT, () => {
   logger.info(`Server running on port ${env.PORT} in ${env.NODE_ENV} mode`);
 });
 
-process.on('SIGTERM', () => {
-  logger.info('SIGTERM received, shutting down gracefully');
-  server.close(() => {
-    logger.info('Server closed');
-    process.exit(0);
-  });
-});
+// ── Graceful shutdown ─────────────────────────────────────────────────────────
+// Handles SIGTERM (Docker/Kubernetes stop) and SIGINT (Ctrl+C)
+const shutdown = async (signal) => {
+  logger.info(`${signal} received — shutting down gracefully`);
 
+  server.close(async () => {
+    try {
+      const prisma = require('./config/database');
+      await prisma.$disconnect();
+      logger.info('DB disconnected. Server closed cleanly.');
+      process.exit(0);
+    } catch (err) {
+      logger.error({ err }, 'Error during shutdown');
+      process.exit(1);
+    }
+  });
+
+  // Force kill after 10s if shutdown hangs (e.g. long-running DB queries)
+  setTimeout(() => {
+    logger.error('Graceful shutdown timed out — forcing exit');
+    process.exit(1);
+  }, 10000);
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT',  () => shutdown('SIGINT'));
+
+// Log unhandled rejections but don't crash (may be transient DB hiccups)
 process.on('unhandledRejection', (reason) => {
   logger.error({ reason }, 'Unhandled promise rejection');
+});
+
+// Crash on uncaught exceptions — unknown state, safer to restart
+process.on('uncaughtException', (err) => {
+  logger.error({ err }, 'Uncaught exception — process will exit');
+  process.exit(1);
 });
 
 module.exports = app;

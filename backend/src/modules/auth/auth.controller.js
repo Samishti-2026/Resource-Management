@@ -9,7 +9,7 @@ const { success } = require('../../utils/apiResponse');
 const loginController = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    // trust proxy must be set so req.ip is the real client IP behind Azure/IIS
+    // trust proxy must be set so req.ip is the real client IP behind Render proxy
     const ipAddress = req.ip || req.socket?.remoteAddress;
     const result = await authService.login(email, password, ipAddress, res);
     return success(res, result, 'Login successful');
