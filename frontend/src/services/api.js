@@ -12,7 +12,7 @@ import { API } from '../constants/api';
  *   - No token is ever written to localStorage or sessionStorage.
  */
 const api = axios.create({
-  baseURL:         '/',
+  baseURL:         import.meta.env.VITE_API_URL || 'https://resource-management-backend-j7ft.onrender.com',
   withCredentials: true,   // required for HttpOnly cookie to be sent
   headers:         { 'Content-Type': 'application/json' },
   timeout:         30000,

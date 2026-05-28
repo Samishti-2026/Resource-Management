@@ -11,18 +11,18 @@ services:
   # BACKEND SERVICE — Node.js + Express API
   # ════════════════════════════════════════════════════════════════════════════
   - type: web
-    name: resource-management
+    name: resource-management-backend-j7ft
     env: node
     plan: starter  # starter, standard, pro
     
     # GitHub repository integration
-    repo: https://github.com/shashank-p-08/Resource-Management
+    repo: https://github.com/Samishti-2026/Resource-Management
     branch: main
     region: singapore  # Match database region for lower latency
     
     # Build configuration
     buildCommand: cd backend && npm install && npx prisma generate && npx prisma migrate deploy
-    startCommand: node backend/src/server.js
+    startCommand: node backend/src/app.js
     
     # Health check
     healthCheckPath: /health
@@ -55,3 +55,24 @@ services:
         fromSecret: JWT_SECRET
       - key: JWT_REFRESH_SECRET
         fromSecret: JWT_REFRESH_SECRET
+
+  # ══════════════════════════════════════════════════════════════════════════════
+  # FRONTEND SERVICE — React + Vite + Nginx
+  # ══════════════════════════════════════════════════════════════════════════════
+  - type: web
+    name: resource-management-web
+    env: docker
+    plan: starter
+
+    # GitHub repository integration
+    repo: https://github.com/Samishti-2026/Resource-Management
+    branch: main
+    region: singapore
+
+    # Docker build from frontend directory
+    dockerContext: ./frontend
+    dockerfilePath: ./frontend/Dockerfile
+
+    # Health check
+    healthCheckPath: /
+    healthCheckInterval: 10
