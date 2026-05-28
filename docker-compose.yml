@@ -1,13 +1,32 @@
 version: '3.9'
 
+# ══════════════════════════════════════════════════════════════════════════════
+# USAGE:
+#
+# Normal startup (dev/prod):
+#   docker compose up -d
+#
+# Load test only:
+#   docker compose --profile load-test run --rm load-test
+#
+# Custom load test:
+#   THREADS=200 RAMPUP=60 LOOPS=3 docker compose --profile load-test run --rm load-test
+#
+# Full CI (build + load test):
+#   docker compose --profile ci up --abort-on-container-exit
+#
+# ══════════════════════════════════════════════════════════════════════════════
+
 services:
+
+  # ── Database (local) ────────────────────────────────────────────────────────
   db:
     image: postgres:16-alpine
     container_name: timesheet_db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: timesheet_db
-      POSTGRES_USER: postgres
+      POSTGRES_DB:       timesheet_db
+      POSTGRES_USER:     postgres
       POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
@@ -19,15 +38,17 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── Backend ──────────────────────────────────────────────────────────────────
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    image: shashankp08/timesheet-backend:latest   # tags the build with DockerHub image name
     container_name: timesheet_backend
     restart: unless-stopped
     env_file: ./backend/.env
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/timesheet_db?schema=public
+      DATABASE_URL: "postgresql://resourcemgmtdb_user:ZHB5RT5Uk2yP2bK9PnBhj6i5YVrHjkci@dpg-d8bssqjeo5us73dnuiqg-a.singapore-postgres.render.com/resourcemgmtdb?connection_limit=10&pool_timeout=30&sslmode=require"
       NODE_ENV: production
     ports:
       - "3000:3000"
@@ -36,7 +57,14 @@ services:
         condition: service_healthy
     command: >
       sh -c "npx prisma migrate deploy && npx prisma db seed && node src/app.js"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
 
+  # ── Frontend ─────────────────────────────────────────────────────────────────
   frontend:
     build:
       context: ./frontend
@@ -47,6 +75,62 @@ services:
       - "80:80"
     depends_on:
       - backend
+
+  # ── Load Test (JMeter) ───────────────────────────────────────────────────────
+  # Profile: load-test
+  # Run: docker compose --profile load-test run --rm load-test
+  # Custom: THREADS=500 RAMPUP=120 LOOPS=5 docker compose --profile load-test run --rm load-test
+  load-test:
+    image: justb4/jmeter:5.6.3
+    container_name: timesheet_load_test
+    profiles:
+      - load-test
+      - ci
+    depends_on:
+      backend:
+        condition: service_healthy     # wait for backend to be fully ready
+    volumes:
+      - ./Load-Test:/load-test         # mounts Load-Test folder (jmx + csv + results)
+    environment:
+      JVM_ARGS: "-Xms512m -Xmx1g"     # 1GB RAM for JMeter — needed for 500 users
+    entrypoint: >
+      jmeter
+        -n
+        -t  /load-test/timesheet.jmx
+        -l  /load-test/results.jtl
+        -e
+        -o  /load-test/report
+        -Jhost=backend
+        -Jport=3000
+        -Jthreads=${THREADS:-100}
+        -Jrampup=${RAMPUP:-60}
+        -Jloops=${LOOPS:-3}
+
+  # ── Push to DockerHub ────────────────────────────────────────────────────────
+  # Profile: push
+  # Run AFTER building: docker compose --profile push run --rm docker-push
+  # Requires: docker login shashankp08 first (or DOCKERHUB_TOKEN env var)
+  docker-push:
+    image: docker:24-cli
+    container_name: timesheet_docker_push
+    profiles:
+      - push
+      - ci
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock   # access host Docker daemon
+    environment:
+      DOCKERHUB_USERNAME: ${DOCKERHUB_USERNAME:-shashankp08}
+      DOCKERHUB_TOKEN:    ${DOCKERHUB_TOKEN}
+    command: >
+      sh -c "
+        echo 'Logging into DockerHub...' &&
+        echo $$DOCKERHUB_TOKEN | docker login -u $$DOCKERHUB_USERNAME --password-stdin &&
+        echo 'Pushing shashankp08/timesheet-backend:latest...' &&
+        docker push shashankp08/timesheet-backend:latest &&
+        echo 'Push complete!'
+      "
+    depends_on:
+      - backend      # ensure backend image is built first
 
 volumes:
   postgres_data:
