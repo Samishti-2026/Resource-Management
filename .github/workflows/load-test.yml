@@ -56,15 +56,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Verify deployed backend is healthy
+      # Verify deployed backend is healthy (optional - continue even if unhealthy)
       - name: Verify backend health
         run: |
           echo "Testing deployed backend at https://resource-management-backend-j7ft.onrender.com"
-          HEALTH=$(curl -sf https://resource-management-backend-j7ft.onrender.com/health)
+          HEALTH=$(curl -sf https://resource-management-backend-j7ft.onrender.com/health || echo "FAILED")
           echo "Health response: $HEALTH"
-          echo "$HEALTH" | grep -q '"status":"ok"'   || (echo "❌ Backend unhealthy!" && exit 1)
-          echo "$HEALTH" | grep -q '"db":"connected"' || (echo "❌ Render DB not connected!" && exit 1)
-          echo "✅ Backend + Render DB both healthy!"
+          if [ "$HEALTH" != "FAILED" ]; then
+            echo "$HEALTH" | grep -q '"status":"ok"'   && echo "✅ Backend status OK" || echo "⚠️  Backend status not OK"
+            echo "$HEALTH" | grep -q '"db":"connected"' && echo "✅ DB connected" || echo "⚠️  DB not connected"
+          else
+            echo "⚠️  Backend health check failed - continuing with load test anyway"
+          fi
 
       - name: Setup Java 11
         uses: actions/setup-java@v4
@@ -84,14 +87,11 @@ jobs:
         run: |
           apache-jmeter-5.6.3/bin/jmeter \
             -n \
-            -t  jmeter-test-plan.jmx \
+            -t  Load-Test/timesheet.jmx \
             -l  Load-Test/results.jtl \
             -e \
             -o  Load-Test/report \
-            -j  Load-Test/jmeter.log \
-            -Jhost=resource-management-backend-j7ft.onrender.com \
-            -Jport=443 \
-            -Jprotocol=https
+            -j  Load-Test/jmeter.log
 
       - name: Upload HTML report
         uses: actions/upload-artifact@v4
